@@ -188,6 +188,72 @@ st.markdown("""
   /* Log */
   .log-box { background:#0d0d0d; border:1px solid var(--border); border-radius:10px; padding:.9rem; font-family:'Courier New',monospace; font-size:.76rem; color:#666; white-space:pre-wrap; max-height:260px; overflow-y:auto; }
 
+  /* ── Tela de carregamento imersiva ── */
+  @keyframes ks-spin  { to { transform: rotate(360deg); } }
+  @keyframes ks-pulse { 0%,100%{box-shadow:0 0 24px rgba(0,245,255,.15),0 0 0 rgba(157,78,221,0)} 50%{box-shadow:0 0 60px rgba(0,245,255,.35),0 0 80px rgba(157,78,221,.2)} }
+  @keyframes ks-fade  { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
+
+  .ks-loading-wrap {
+    background: linear-gradient(160deg,#08080f,#0d0d1a,#0a0a0a);
+    border: 1px solid rgba(0,245,255,.22);
+    border-radius: 22px;
+    padding: 3.5rem 2rem 3rem;
+    text-align: center;
+    margin: 1rem 0 2rem;
+    animation: ks-pulse 2.4s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+  }
+  .ks-loading-wrap::before {
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at 30% 40%,rgba(0,245,255,.04),transparent 55%),
+                radial-gradient(ellipse at 70% 60%,rgba(157,78,221,.05),transparent 55%);
+    pointer-events:none;
+  }
+  .ks-spinner {
+    width:76px; height:76px;
+    border:4px solid rgba(0,245,255,.12);
+    border-top-color:#00f5ff;
+    border-right-color:rgba(157,78,221,.6);
+    border-radius:50%;
+    animation:ks-spin .75s linear infinite;
+    margin:0 auto 1.6rem;
+  }
+  .ks-agent-name {
+    font-size:1.15rem; font-weight:800;
+    background:linear-gradient(90deg,#00f5ff,#9d4edd);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    margin-bottom:.55rem; letter-spacing:.2px;
+  }
+  .ks-msg {
+    color:#999; font-size:.9rem; min-height:1.5em;
+    animation:ks-fade .35s ease-out;
+  }
+  .ks-steps {
+    display:flex; justify-content:center; margin:1.8rem auto .4rem;
+    max-width:520px; border-radius:10px; overflow:hidden;
+    border:1px solid #1c1c1c;
+  }
+  .ks-step {
+    flex:1; padding:.38rem .5rem; font-size:.73rem; font-weight:600;
+    color:#333; background:#0e0e0e; border-right:1px solid #1c1c1c;
+    transition:all .3s ease; white-space:nowrap;
+  }
+  .ks-step:last-child { border-right:none; }
+  .ks-step.active  { background:rgba(0,245,255,.08); color:#00f5ff; border-bottom:2px solid #00f5ff; }
+  .ks-step.done    { background:rgba(0,255,136,.06); color:#00ff88; }
+  .ks-wait-msg {
+    margin-top:1.4rem; color:#444; font-size:.78rem;
+    display:flex; align-items:center; justify-content:center; gap:.4rem;
+  }
+  /* Inputs desabilitados durante carregamento */
+  .ks-disabled-hint {
+    color:#555; font-size:.78rem; text-align:center;
+    padding:.35rem; margin-top:.3rem;
+    animation:ks-fade .3s ease-out;
+  }
+
   /* Cards de conteúdo — fundo escuro, texto branco */
   .content-card {
     background: rgba(255,255,255,0.05);
@@ -306,6 +372,8 @@ def _init_state():
         "historico":        [],
         "resultado_atual":  None,
         "tema_input":       "",
+        "carregando":       False,
+        "tema_pendente":    "",
         # Questão
         "tentativas":       0,
         "nivel_dica_atual": 0,
@@ -335,6 +403,31 @@ def _init_state():
             st.session_state[k] = v
 
 _init_state()
+
+_ETAPAS_LOADING = ["🔍 Pesquisando", "🧠 Analisando", "📝 Sintetizando", "📚 Questões"]
+
+def _loading_html(agente: str, mensagem: str, etapa: int) -> str:
+    """Gera o HTML da tela de carregamento imersiva."""
+    steps_html = ""
+    for i, e in enumerate(_ETAPAS_LOADING):
+        if i < etapa:
+            cls = "ks-step done"
+        elif i == etapa:
+            cls = "ks-step active"
+        else:
+            cls = "ks-step"
+        steps_html += f'<div class="{cls}">{e}</div>'
+
+    return f"""
+    <div class="ks-loading-wrap">
+      <div class="ks-spinner"></div>
+      <div class="ks-agent-name">{agente}</div>
+      <div class="ks-msg">{mensagem}</div>
+      <div class="ks-steps">{steps_html}</div>
+      <div class="ks-wait-msg">⏳ Aguarde, gerando seu material...</div>
+    </div>
+    """
+
 
 def _get_edu() -> EduSynth:
     if st.session_state["edu"] is None:
@@ -726,10 +819,12 @@ for i, (col, tema_b) in enumerate(zip(cols_bal[:5], temas_balao)):
     bg, borda, cor = _CORES_BALAO[i]
     with col:
         # Botão nativo do Streamlit com key única
+        _bloqueado = st.session_state.get("carregando", False)
         if st.button(
             tema_b,
             key=f"balao_{tema_b}_{st.session_state['baloes_ts']:.0f}",
             use_container_width=True,
+            disabled=_bloqueado,
         ):
             st.session_state["tema_input"] = tema_b
             # Dispara pipeline automaticamente via flag
@@ -747,126 +842,124 @@ with cols_bal[5]:
 st.markdown("")
 
 # ── Input ─────────────────────────────────────────────────────────────────────
+_esta_carregando = st.session_state.get("carregando", False)
 col_inp, col_btn = st.columns([5, 1])
 with col_inp:
     tema_digitado = st.text_input(
         "Tema",
         value=st.session_state["tema_input"],
-        placeholder="Digite um tema ou palavra-chave do ENEM...",
+        placeholder="⏳ Aguarde, gerando seu material..." if _esta_carregando else "Digite um tema ou palavra-chave do ENEM...",
         label_visibility="collapsed",
+        disabled=_esta_carregando,
     )
 with col_btn:
-    iniciar = st.button("🚀 Estudar Agora", type="primary", use_container_width=True)
+    iniciar = st.button(
+        "⏳ Gerando..." if _esta_carregando else "🚀 Estudar Agora",
+        type="primary",
+        use_container_width=True,
+        disabled=_esta_carregando,
+    )
+
+if _esta_carregando:
+    st.markdown('<div class="ks-disabled-hint">⏳ Aguarde — seus agentes estão trabalhando...</div>', unsafe_allow_html=True)
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
-# Balão clicado dispara o pipeline automaticamente
+# Balão clicado: define tema pendente e ativa carregamento
 if st.session_state.get("balao_clicado") and st.session_state["tema_input"]:
     st.session_state["balao_clicado"] = False
-    iniciar = True
-    tema_digitado = st.session_state["tema_input"]
-
-if iniciar and tema_digitado.strip():
-    tema = tema_digitado.strip()
+    st.session_state["tema_pendente"] = st.session_state["tema_input"]
+    st.session_state["carregando"]    = True
     st.session_state.update({
-        "tema_input":       tema,
-        "nivel_dica_atual": 0,
-        "dicas_texto":      [],
-        "gabarito_texto":   None,
-        "tentativas":       0,
-        "resposta_correta": False,
-        "letra_escolhida":  None,
-        "fila_questoes":    [],
-        "fila_idx":         0,
-        "questao_atual":    None,
-        "oferta_ia_vista":  False,
-        "questao_ia_ativa": False,
-        "fila_concluida":   False,
+        "nivel_dica_atual": 0, "dicas_texto": [], "gabarito_texto": None,
+        "tentativas": 0, "resposta_correta": False, "letra_escolhida": None,
+        "fila_questoes": [], "fila_idx": 0, "questao_atual": None,
+        "oferta_ia_vista": False, "questao_ia_ativa": False, "fila_concluida": False,
     })
+    st.rerun()
+
+# Botão "Estudar Agora": define tema pendente e ativa carregamento
+if iniciar and tema_digitado.strip():
+    st.session_state.update({
+        "tema_input":       tema_digitado.strip(),
+        "tema_pendente":    tema_digitado.strip(),
+        "carregando":       True,
+        "nivel_dica_atual": 0, "dicas_texto": [], "gabarito_texto": None,
+        "tentativas": 0, "resposta_correta": False, "letra_escolhida": None,
+        "fila_questoes": [], "fila_idx": 0, "questao_atual": None,
+        "oferta_ia_vista": False, "questao_ia_ativa": False, "fila_concluida": False,
+    })
+    st.rerun()
+
+# ── Execução do pipeline com tela imersiva ────────────────────────────────────
+if st.session_state["carregando"] and st.session_state["tema_pendente"]:
+    tema = st.session_state["tema_pendente"]
 
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
-    st.markdown(f'<h3 style="color:var(--cyan)">⚡ {nome}, gerando material sobre: <span style="color:#fff">{tema}</span></h3>', unsafe_allow_html=True)
+    loading_area = st.empty()
 
-    barra  = st.progress(0, text="Iniciando pipeline...")
-    status = st.empty()
+    def _show(agente: str, msg: str, etapa: int):
+        loading_area.markdown(_loading_html(agente, msg, etapa), unsafe_allow_html=True)
 
+    _show("🔍 Pesquisador", "Pesquisando nas melhores fontes para você...", 0)
+
+    _erro_pipeline = None
     try:
         from agents.researcher  import pesquisar   as _pesquisar
         from agents.critic      import analisar     as _analisar
         from agents.synthesizer import sintetizar   as _sintetizar
 
-        barra.progress(10, text="🔍 Pesquisando conteúdo...")
-        with status.container():
-            st.info(f"🔍 **Pesquisador** buscando fontes para **{nome}**...")
         r_pesquisa = _pesquisar(tema)
         if r_pesquisa.get("tipo_busca") == "erro":
             raise RuntimeError(r_pesquisa.get("erro"))
 
-        total_f = sum(len(r_pesquisa.get(k, [])) for k in ["conteudo_didatico","noticias_relevantes","referencias_academicas"])
-        barra.progress(30, text="✅ Pesquisa concluída!")
-        with status.container():
-            st.success(f"🔍 {total_f} fontes encontradas (modo: **{r_pesquisa.get('tipo_busca','')}**)")
-
-        barra.progress(42, text="🧠 Análise crítica...")
-        with status.container():
-            st.info("🧠 **Crítico** analisando frequência no ENEM e conexões interdisciplinares...")
+        _show("🧠 Crítico", "Analisando o que mais cai no ENEM...", 1)
         r_critica = _analisar(r_pesquisa)
         if r_critica.get("erro"):
             raise RuntimeError(r_critica["erro"])
 
-        barra.progress(62, text="✅ Análise concluída!")
-        with status.container():
-            st.success(f"🧠 Análise concluída — prioridade: **{r_critica.get('nivel_prioridade','—')}** | {r_critica.get('tokens_usados',0)} tokens")
-
-        barra.progress(72, text="📝 Sintetizando material...")
-        with status.container():
-            st.info("📝 **Sintetizador** criando material personalizado e questão ENEM...")
+        _show("📝 Sintetizador", "Preparando seu material personalizado com carinho...", 2)
         r_sintese = _sintetizar(r_pesquisa, r_critica, edu._analista.snapshot())
         if r_sintese.get("erro"):
             raise RuntimeError(r_sintese["erro"])
 
-        barra.progress(88, text="📊 Registrando sessão...")
         edu._analista.register_search(tema)
 
-        # Busca questões reais da enem.dev e monta a fila Top 3
-        barra.progress(92, text="📚 Buscando questões reais do ENEM...")
+        _show("🏆 ENEM API + Ranqueador", "Classificando as questões por dificuldade...", 3)
         try:
-            from agents.enem_api       import search_questions_by_topic
+            from agents.enem_api          import search_questions_by_topic
             from agents.complexity_ranker import classificar_top3
 
             questoes_reais = search_questions_by_topic(tema, limit=15)
             if questoes_reais:
                 top3 = classificar_top3(questoes_reais)
-                fila = []
-                for chave in ("facil", "medio", "dificil"):
-                    q = top3.get(chave)
-                    if q:
-                        fila.append(q)
+                fila = [top3[c] for c in ("facil", "medio", "dificil") if top3.get(c)]
                 st.session_state["fila_questoes"] = fila
                 st.session_state["fila_idx"]      = 0
                 st.session_state["questao_atual"] = fila[0] if fila else None
         except Exception:
-            # Falha silenciosa — fila vazia, app usa questão sintética
             st.session_state["fila_questoes"] = []
             st.session_state["questao_atual"] = None
-
-        barra.progress(100, text="✅ Pronto!")
-        with status.container():
-            n_reais = len(st.session_state["fila_questoes"])
-            st.success(f"✅ Pronto, {nome}! Material + {n_reais} questão(ões) real(is) do ENEM carregadas.")
 
         st.session_state["resultado_atual"] = {
             "tema": tema, "pesquisa": r_pesquisa,
             "critica": r_critica, "sintese": r_sintese,
         }
-
-        hist = [(t,a,d) for t,a,d in st.session_state["historico"] if t != tema]
+        hist = [(t, a, d) for t, a, d in st.session_state["historico"] if t != tema]
         hist.append((tema, "não informada", 0))
         st.session_state["historico"] = hist
 
     except Exception as e:
-        barra.progress(100, text="❌ Erro no pipeline")
-        with status.container():
-            st.error(f"❌ {nome}, ocorreu um erro: {e}")
+        _erro_pipeline = e
+
+    finally:
+        st.session_state["carregando"]    = False
+        st.session_state["tema_pendente"] = ""
+
+    # Limpa overlay ou mostra erro
+    if _erro_pipeline:
+        loading_area.error(f"❌ {nome}, ocorreu um erro: {_erro_pipeline}")
+    else:
+        loading_area.empty()
 
 # ── Resultado em abas ─────────────────────────────────────────────────────────
 if st.session_state["resultado_atual"]:
@@ -1327,8 +1420,8 @@ if st.session_state["resultado_atual"]:
         if st.button("🖥️ Ver Log do Pipeline", use_container_width=True):
             st.markdown(f'<div class="log-box">{edu.log_sessao()}</div>', unsafe_allow_html=True)
 
-# ── Tela inicial (sem resultado) ──────────────────────────────────────────────
-elif not iniciar:
+# ── Tela inicial (sem resultado e sem carregamento) ───────────────────────────
+elif not st.session_state.get("carregando") and not iniciar:
     st.markdown(f"""
     <div style="text-align:center;padding:2.5rem 1rem">
       <div style="font-size:2.8rem">⚡</div>

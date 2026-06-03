@@ -5,7 +5,11 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
+
+try:
+    from agents.groq_utils import chamar_groq
+except ImportError:
+    from groq_utils import chamar_groq
 
 
 def parse_groq_response(text: str) -> dict:
@@ -107,7 +111,6 @@ class PerformanceAnalyst:
 
     def __init__(self):
         self._skill = _carregar_skill()
-        self._client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self._inicio_sessao = time.time()
 
         # Estrutura: tema → {area, pesquisas, dicas_max, pulou_gabarito, timestamps}
@@ -204,36 +207,32 @@ Seja concreto — evite conselhos genéricos como "estude mais".)
 **VOCÊ AVANÇOU HOJE!**
 (1 frase motivadora e personalizada com base nos temas estudados na sessão)"""
 
-        try:
-            resposta = self._client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                max_tokens=1200,
-                messages=[
-                    {"role": "system", "content": self._skill},
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            texto = resposta.choices[0].message.content
-            tokens = resposta.usage.total_tokens if resposta.usage else 0
+        r = chamar_groq(
+            messages=[
+                {"role": "system", "content": self._skill},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=1200,
+        )
 
-        except Exception as e:
+        if r["erro"]:
             return {
-                "resumo_sessao": f"Erro ao gerar relatório: {e}",
+                "resumo_sessao": f"Limite de uso atingido ou erro ao gerar relatório: {r['erro']}",
                 "dificuldade_por_tema": dificuldade_por_tema,
                 "pontos_fracos": self._top_pontos_fracos(),
-                "recomendacoes": [],
+                "recomendacoes": self._recomendacoes_rapidas(),
                 "preview_v2": PREVIEW_V2,
                 "tokens_usados": 0,
-                "erro": str(e),
+                "erro": r["erro"],
             }
 
         return {
-            "resumo_sessao": texto,
+            "resumo_sessao": r["texto"],
             "dificuldade_por_tema": dificuldade_por_tema,
             "pontos_fracos": self._top_pontos_fracos(),
             "recomendacoes": self._recomendacoes_rapidas(),
             "preview_v2": PREVIEW_V2,
-            "tokens_usados": tokens,
+            "tokens_usados": r["tokens_usados"],
             "erro": None,
         }
 

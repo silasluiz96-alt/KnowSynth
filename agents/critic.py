@@ -3,7 +3,11 @@ import re
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
+
+try:
+    from agents.groq_utils import chamar_groq
+except ImportError:
+    from groq_utils import chamar_groq
 
 
 def parse_groq_response(text: str) -> dict:
@@ -131,38 +135,32 @@ def analisar(resultado_pesquisa: dict) -> dict:
     contexto = _montar_contexto_pesquisa(resultado_pesquisa)
     prompt = _montar_prompt(contexto)
 
+    r = chamar_groq(
+        messages=[
+            {"role": "system", "content": skill},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=2000,
+    )
+    if r["erro"]:
+        return _resultado_erro(resultado_pesquisa.get("tema", ""), r["erro"])
+
+    texto = r["texto"].strip()
+
+    # Remove blocos de código markdown se presentes
+    if texto.startswith("```"):
+        linhas = texto.splitlines()
+        texto = "\n".join(linhas[1:-1] if linhas[-1] == "```" else linhas[1:])
+
     try:
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        resposta = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=2000,
-            messages=[
-                {"role": "system", "content": skill},
-                {"role": "user", "content": prompt},
-            ],
-        )
-
-        texto = resposta.choices[0].message.content.strip()
-
-        # Remove blocos de código markdown se presentes
-        if texto.startswith("```"):
-            linhas = texto.splitlines()
-            texto = "\n".join(linhas[1:-1] if linhas[-1] == "```" else linhas[1:])
-
         analise = parse_groq_response(texto)
-
-    except json.JSONDecodeError as e:
+    except Exception as e:
         return _resultado_erro(
             resultado_pesquisa.get("tema", ""),
             f"Resposta do Groq não é JSON válido: {e}",
         )
-    except Exception as e:
-        return _resultado_erro(
-            resultado_pesquisa.get("tema", ""),
-            f"Erro ao chamar a API do Groq: {e}",
-        )
 
-    tokens = resposta.usage.total_tokens if resposta.usage else 0
+    tokens = r["tokens_usados"]
     return {
         "tema": resultado_pesquisa.get("tema", ""),
         "frequencia_enem": analise.get("frequencia_enem", {}),

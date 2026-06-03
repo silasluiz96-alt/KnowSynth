@@ -3,7 +3,11 @@ import json
 import re
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
+
+try:
+    from agents.groq_utils import chamar_groq
+except ImportError:
+    from groq_utils import chamar_groq
 
 
 def parse_groq_response(text: str) -> dict:
@@ -123,7 +127,6 @@ class Strategist:
 
     def __init__(self):
         self._skill = _carregar_skill()
-        self._client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         # Rastreia dicas por questão usando o enunciado como chave
         self._dicas_entregues: dict[str, int] = {}
 
@@ -140,27 +143,14 @@ class Strategist:
         self._dicas_entregues[chave] = max(atual, nivel)
 
     def _chamar_groq(self, prompt: str) -> dict:
-        """Chama a API do Groq e retorna texto + tokens usados."""
-        try:
-            resposta = self._client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                max_tokens=1000,
-                messages=[
-                    {"role": "system", "content": self._skill},
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            return {
-                "texto": resposta.choices[0].message.content,
-                "tokens_usados": resposta.usage.total_tokens if resposta.usage else 0,
-                "erro": None,
-            }
-        except Exception as e:
-            return {
-                "texto": "",
-                "tokens_usados": 0,
-                "erro": f"Erro ao chamar a API do Groq: {e}",
-            }
+        """Chama o Groq com fallback automático de modelo."""
+        return chamar_groq(
+            messages=[
+                {"role": "system", "content": self._skill},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=1000,
+        )
 
     def get_hint(self, level: int, questao: dict) -> dict:
         """

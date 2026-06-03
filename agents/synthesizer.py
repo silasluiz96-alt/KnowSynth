@@ -3,7 +3,11 @@ import re
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
+
+try:
+    from agents.groq_utils import chamar_groq
+except ImportError:
+    from groq_utils import chamar_groq
 
 
 def parse_groq_response(text: str) -> dict:
@@ -234,43 +238,35 @@ def sintetizar(
 
     prompt = _montar_prompt(tema, pesquisa_txt, critica_txt, desempenho_txt)
 
-    try:
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        resposta = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=4000,
-            messages=[
-                {"role": "system", "content": skill},
-                {"role": "user", "content": prompt},
-            ],
-        )
+    r = chamar_groq(
+        messages=[
+            {"role": "system", "content": skill},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=4000,
+    )
+    if r["erro"]:
+        return _resultado_erro(tema, r["erro"])
 
-        texto = resposta.choices[0].message.content.strip()
-        if texto.startswith("```"):
-            linhas = texto.splitlines()
-            texto = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
+    texto = r["texto"].strip()
+    if texto.startswith("```"):
+        linhas = texto.splitlines()
+        texto = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
 
-        material = parse_groq_response(texto)
+    material = parse_groq_response(texto)
 
-        # Se o parse retornou fallback {"content": ...}, extrai o texto bruto
-        # e tenta encontrar JSON embutido no meio da resposta
-        if "content" in material and "introducao" not in material:
-            import re as _re
-            texto_bruto = material["content"]
-            # Tenta encontrar bloco JSON dentro de texto livre
-            match = _re.search(r'\{[\s\S]*\}', texto_bruto)
-            if match:
-                try:
-                    material = parse_groq_response(match.group(0))
-                except Exception:
-                    pass
-            # Se ainda não tem os campos, mantém o texto bruto em "content"
-            # para que o app.py possa exibí-lo como fallback legível
-
-    except json.JSONDecodeError as e:
-        return _resultado_erro(tema, f"Resposta do Groq não é JSON válido: {e}")
-    except Exception as e:
-        return _resultado_erro(tema, f"Erro ao chamar a API do Groq: {e}")
+    # Se o parse retornou fallback {"content": ...}, tenta extrair JSON embutido
+    if "content" in material and "introducao" not in material:
+        import re as _re
+        texto_bruto = material["content"]
+        match = _re.search(r'\{[\s\S]*\}', texto_bruto)
+        if match:
+            try:
+                material = parse_groq_response(match.group(0))
+            except Exception:
+                pass
+        # Se ainda não tem os campos, mantém o texto bruto em "content"
+        # para que o app.py possa exibí-lo como fallback legível
 
     # Separa a questão completa (com gabarito interno) da versão para o estudante
     questao_completa = material.get("questao_enem", {})
@@ -289,7 +285,8 @@ def sintetizar(
         "analise_palavras_chave": material.get("analise_palavras_chave", {}),
         "dicas_de_prova": material.get("dicas_de_prova", []),
         "leituras_recomendadas": material.get("leituras_recomendadas", {}),
-        "tokens_usados": resposta.usage.total_tokens if resposta.usage else 0,
+        "tokens_usados": r["tokens_usados"],
+        "modelo_usado": r["modelo_usado"],
         "skill_utilizada": str(SKILL_PATH),
         "erro": None,
     }

@@ -9,6 +9,14 @@ fácil → médio → difícil, com justificativa pedagógica.
 import os
 import json
 import re
+from dotenv import load_dotenv
+
+try:
+    from agents.groq_utils import chamar_groq
+except ImportError:
+    from groq_utils import chamar_groq
+
+load_dotenv()
 
 
 def parse_groq_response(text: str) -> dict:
@@ -21,10 +29,6 @@ def parse_groq_response(text: str) -> dict:
             return json.loads(cleaned)
         except Exception:
             return {"content": text}
-from dotenv import load_dotenv
-from groq import Groq
-
-load_dotenv()
 
 SYSTEM_PROMPT = """Você é um especialista em avaliação pedagógica de questões do ENEM.
 Sua função é analisar questões e classificar sua complexidade de forma precisa e justificada,
@@ -68,9 +72,9 @@ def _extrair_texto_questao(q: dict) -> str:
     return "\n".join(partes)
 
 
-def _classificar_uma(client: Groq, questao: dict) -> dict:
+def _classificar_uma(questao: dict) -> dict:
     """
-    Classifica uma única questão via Groq.
+    Classifica uma única questão via Groq (com fallback automático de modelo).
     Retorna a questão enriquecida com dificuldade e justificativa.
     """
     texto = _extrair_texto_questao(questao)
@@ -90,31 +94,27 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
   "justificativa": "explicação pedagógica em 1-2 frases"
 }}"""
 
-    try:
-        resposta = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=120,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-        )
-        texto_resp = resposta.choices[0].message.content.strip()
+    r = chamar_groq(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=120,
+    )
 
-        # Remove markdown code block se presente
+    dificuldade = "médio"
+    justificativa = "Classificação automática — análise indisponível."
+
+    if not r["erro"]:
+        texto_resp = r["texto"].strip()
         if texto_resp.startswith("```"):
             linhas = texto_resp.splitlines()
             texto_resp = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
-
         dados = parse_groq_response(texto_resp)
-        dificuldade = dados.get("dificuldade", "médio").lower()
-        if dificuldade not in ("fácil", "médio", "difícil"):
-            dificuldade = "médio"
-        justificativa = dados.get("justificativa", "")
-
-    except Exception:
-        dificuldade = "médio"
-        justificativa = "Classificação automática — análise indisponível."
+        nivel = dados.get("dificuldade", "médio").lower()
+        if nivel in ("fácil", "médio", "difícil"):
+            dificuldade = nivel
+        justificativa = dados.get("justificativa", justificativa)
 
     resultado = dict(questao)
     resultado["dificuldade"] = dificuldade
@@ -146,8 +146,7 @@ def classificar_top3(questoes: list[dict]) -> dict:
             "erro": "Nenhuma questão fornecida para classificação.",
         }
 
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
+    if not os.getenv("GROQ_API_KEY"):
         return {
             "facil": None, "medio": None, "dificil": None,
             "total_analisadas": 0,
@@ -155,11 +154,10 @@ def classificar_top3(questoes: list[dict]) -> dict:
             "erro": "GROQ_API_KEY não encontrada no arquivo .env",
         }
 
-    client = Groq(api_key=api_key)
     classificadas = []
 
     for q in questoes:
-        classificada = _classificar_uma(client, q)
+        classificada = _classificar_uma(q)
         classificadas.append(classificada)
 
     # Agrupa por nível
