@@ -107,88 +107,52 @@ def _serializar_desempenho(r: dict) -> str:
 
 
 def _montar_prompt(tema: str, pesquisa: str, critica: str, desempenho: str) -> str:
-    return f"""Você recebeu os outputs de todos os agentes do pipeline KnowSynth sobre o tema "{tema}".
+    return f"""Gere material de estudo sobre "{tema}" com base nos inputs abaixo. Retorne APENAS JSON válido.
 
---- OUTPUT DO PESQUISADOR ---
-{pesquisa}
+PESQUISADOR: {pesquisa}
+CRÍTICO: {critica}
 
---- OUTPUT DO PROFESSOR CRÍTICO ---
-{critica}
-
---- CONTEXTO DO ANALISTA DE DESEMPENHO ---
-{desempenho}
-
-Com base nesses inputs, gere o material de estudo completo no formato JSON abaixo.
-Retorne APENAS o JSON válido, sem texto antes ou depois.
+JSON esperado (seja conciso — respeite os limites indicados):
 
 {{
-  "introducao": "string — explicação acessível em até 3 parágrafos, com analogias e contexto atual",
+  "introducao": "2 parágrafos curtos: definição clara + contexto atual com analogia",
 
   "pontos_essenciais": [
-    {{
-      "conceito": "nome do conceito",
-      "definicao": "definição clara e simples",
-      "exemplo": "exemplo prático do cotidiano",
-      "cobrado_enem": true
-    }}
+    {{"conceito": "nome", "definicao": "1 frase", "exemplo": "1 frase cotidiana", "cobrado_enem": true}}
   ],
 
   "conexoes_interdisciplinares": [
-    {{
-      "disciplina": "nome da disciplina",
-      "como_se_conecta": "explicação da conexão",
-      "exemplo_enem": "como o ENEM já explorou isso"
-    }}
+    {{"disciplina": "nome", "como_se_conecta": "1 frase", "exemplo_enem": "1 frase"}}
   ],
 
   "questao_enem": {{
-    "texto_apoio": "texto motivador (notícia, dado, trecho — obrigatório)",
+    "texto_apoio": "texto de apoio curto (2-4 linhas)",
     "enunciado": "enunciado com comando explícito",
     "alternativas": {{
-      "A": "texto da alternativa A",
-      "B": "texto da alternativa B",
-      "C": "texto da alternativa C",
-      "D": "texto da alternativa D",
-      "E": "texto da alternativa E"
+      "A": "alternativa A",
+      "B": "alternativa B",
+      "C": "alternativa C",
+      "D": "alternativa D",
+      "E": "alternativa E"
     }},
-    "gabarito_interno": "letra da alternativa correta (A, B, C, D ou E)",
-    "nota_sobre_alternativas": {{
-      "claramente_errada": "letra e motivo",
-      "com_pegadinha": ["letra1 — motivo", "letra2 — motivo"],
-      "quase_correta": "letra e motivo",
-      "correta": "letra e motivo completo"
-    }}
+    "gabarito_interno": "letra correta (A-E)"
   }},
 
   "analise_palavras_chave": {{
-    "no_enunciado": {{
-      "conectivos": ["lista de conectivos presentes e seu efeito"],
-      "delimitadores": ["lista de delimitadores e o que restringem"],
-      "comando": "o comando da questão e o que ele exige do estudante"
-    }},
-    "nas_alternativas": {{
-      "absolutismo_armadilha": ["alternativas com palavras absolutas e por que eliminam"],
-      "pegadinhas_vocabulario": ["termos parecidos com o correto mas diferentes"],
-      "marcadores_correto": "o que torna a alternativa correta reconhecível"
-    }}
+    "no_enunciado": {{"comando": "o que a questão pede"}},
+    "nas_alternativas": {{"marcadores_correto": "o que marca a correta"}}
   }},
 
-  "dicas_de_prova": [
-    "dica específica para não errar questões desse tema"
-  ],
+  "dicas_de_prova": ["dica 1", "dica 2"],
 
   "leituras_recomendadas": {{
-    "indicacoes": [
-      {{"tipo": "artigo/vídeo/capítulo", "titulo": "título sugerido", "onde_encontrar": "onde buscar"}}
-    ],
-    "palavras_chave_scholar": ["palavra1", "palavra2", "palavra3"],
-    "exemplo_busca": "exemplo de como formular a busca no Google Scholar"
+    "indicacoes": [{{"tipo": "tipo", "titulo": "título", "onde_encontrar": "onde"}}],
+    "palavras_chave_scholar": ["termo1", "termo2"]
   }}
 }}
 
-IMPORTANTE: O campo "gabarito_interno" existe apenas para uso técnico interno.
-O material entregue ao estudante NÃO deve conter o gabarito — ele só é liberado
-pelo Estrategista após as 3 dicas progressivas."""
+LIMITES: introducao=2 parágrafos, pontos_essenciais=3 itens, conexoes=2 itens, dicas=2 itens, leituras=2 itens.
+gabarito_interno é uso interno — não exibir ao estudante."""
 
 
 def sintetizar(
@@ -227,7 +191,7 @@ def sintetizar(
 
     prompt = _montar_prompt(tema, pesquisa_txt, critica_txt, desempenho_txt)
 
-    r = chamar_llm(prompt=prompt, system_prompt=skill, max_tokens=2000)
+    r = chamar_llm(prompt=prompt, system_prompt=skill, max_tokens=1500)
     if r["erro"]:
         return _resultado_erro(tema, r["erro"])
 
