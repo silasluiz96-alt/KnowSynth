@@ -1,25 +1,14 @@
-﻿import json
+﻿import os
 import re
-import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
 try:
-    from agents.groq_utils import chamar_llm as chamar_groq
+    from utils.llm_client import chamar_llm, parse_resposta_json
 except ImportError:
-    from groq_utils import chamar_llm as chamar_groq
-
-
-def parse_groq_response(text: str) -> dict:
-    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            return {"content": text}
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from utils.llm_client import chamar_llm, parse_resposta_json
 
 load_dotenv()
 
@@ -238,35 +227,11 @@ def sintetizar(
 
     prompt = _montar_prompt(tema, pesquisa_txt, critica_txt, desempenho_txt)
 
-    r = chamar_groq(
-        messages=[
-            {"role": "system", "content": skill},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=4000,
-    )
+    r = chamar_llm(prompt=prompt, system_prompt=skill, max_tokens=4000)
     if r["erro"]:
         return _resultado_erro(tema, r["erro"])
 
-    texto = r["texto"].strip()
-    if texto.startswith("```"):
-        linhas = texto.splitlines()
-        texto = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
-
-    material = parse_groq_response(texto)
-
-    # Se o parse retornou fallback {"content": ...}, tenta extrair JSON embutido
-    if "content" in material and "introducao" not in material:
-        import re as _re
-        texto_bruto = material["content"]
-        match = _re.search(r'\{[\s\S]*\}', texto_bruto)
-        if match:
-            try:
-                material = parse_groq_response(match.group(0))
-            except Exception:
-                pass
-        # Se ainda não tem os campos, mantém o texto bruto em "content"
-        # para que o app.py possa exibí-lo como fallback legível
+    material = parse_resposta_json(r["texto"])
 
     # Separa a questão completa (com gabarito interno) da versão para o estudante
     questao_completa = material.get("questao_enem", {})

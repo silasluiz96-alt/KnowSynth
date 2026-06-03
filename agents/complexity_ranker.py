@@ -7,28 +7,16 @@ fácil → médio → difícil, com justificativa pedagógica.
 """
 
 import os
-import json
-import re
+import sys
 from dotenv import load_dotenv
 
 try:
-    from agents.groq_utils import chamar_llm as chamar_groq
+    from utils.llm_client import chamar_llm, parse_resposta_json
 except ImportError:
-    from groq_utils import chamar_llm as chamar_groq
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from utils.llm_client import chamar_llm, parse_resposta_json
 
 load_dotenv()
-
-
-def parse_groq_response(text: str) -> dict:
-    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            return {"content": text}
 
 SYSTEM_PROMPT = """Você é um especialista em avaliação pedagógica de questões do ENEM.
 Sua função é analisar questões e classificar sua complexidade de forma precisa e justificada,
@@ -94,23 +82,17 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
   "justificativa": "explicação pedagógica em 1-2 frases"
 }}"""
 
-    r = chamar_groq(
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
+    r = chamar_llm(
+        prompt=prompt,
+        system_prompt=SYSTEM_PROMPT,
         max_tokens=120,
     )
 
-    dificuldade = "médio"
+    dificuldade   = "médio"
     justificativa = "Classificação automática — análise indisponível."
 
     if not r["erro"]:
-        texto_resp = r["texto"].strip()
-        if texto_resp.startswith("```"):
-            linhas = texto_resp.splitlines()
-            texto_resp = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
-        dados = parse_groq_response(texto_resp)
+        dados = parse_resposta_json(r["texto"])
         nivel = dados.get("dificuldade", "médio").lower()
         if nivel in ("fácil", "médio", "difícil"):
             dificuldade = nivel

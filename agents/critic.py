@@ -1,25 +1,14 @@
-import json
-import re
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+# utils/ está na raiz do projeto (um nível acima de agents/)
 try:
-    from agents.groq_utils import chamar_llm as chamar_groq
+    from utils.llm_client import chamar_llm, parse_resposta_json
 except ImportError:
-    from groq_utils import chamar_llm as chamar_groq
-
-
-def parse_groq_response(text: str) -> dict:
-    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            return {"content": text}
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from utils.llm_client import chamar_llm, parse_resposta_json
 
 load_dotenv()
 
@@ -135,32 +124,12 @@ def analisar(resultado_pesquisa: dict) -> dict:
     contexto = _montar_contexto_pesquisa(resultado_pesquisa)
     prompt = _montar_prompt(contexto)
 
-    r = chamar_groq(
-        messages=[
-            {"role": "system", "content": skill},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=2000,
-    )
+    r = chamar_llm(prompt=prompt, system_prompt=skill, max_tokens=2000)
     if r["erro"]:
         return _resultado_erro(resultado_pesquisa.get("tema", ""), r["erro"])
 
-    texto = r["texto"].strip()
-
-    # Remove blocos de código markdown se presentes
-    if texto.startswith("```"):
-        linhas = texto.splitlines()
-        texto = "\n".join(linhas[1:-1] if linhas[-1] == "```" else linhas[1:])
-
-    try:
-        analise = parse_groq_response(texto)
-    except Exception as e:
-        return _resultado_erro(
-            resultado_pesquisa.get("tema", ""),
-            f"Resposta do Groq não é JSON válido: {e}",
-        )
-
-    tokens = r["tokens_usados"]
+    analise = parse_resposta_json(r["texto"])
+    tokens  = r["tokens_usados"]
     return {
         "tema": resultado_pesquisa.get("tema", ""),
         "frequencia_enem": analise.get("frequencia_enem", {}),

@@ -1,25 +1,14 @@
 import os
-import json
-import re
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
 try:
-    from agents.groq_utils import chamar_llm as chamar_groq
+    from utils.llm_client import chamar_llm
 except ImportError:
-    from groq_utils import chamar_llm as chamar_groq
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from utils.llm_client import chamar_llm
 
-
-def parse_groq_response(text: str) -> dict:
-    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            return {"content": text}
 
 load_dotenv()
 
@@ -143,12 +132,10 @@ class Strategist:
         self._dicas_entregues[chave] = max(atual, nivel)
 
     def _chamar_groq(self, prompt: str) -> dict:
-        """Chama o Groq com fallback automático de modelo."""
-        return chamar_groq(
-            messages=[
-                {"role": "system", "content": self._skill},
-                {"role": "user", "content": prompt},
-            ],
+        """Chama o LLM (Gemini → Groq) para gerar dicas e gabarito."""
+        return chamar_llm(
+            prompt=prompt,
+            system_prompt=self._skill,
             max_tokens=1000,
         )
 
