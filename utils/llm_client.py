@@ -8,8 +8,8 @@ Responsabilidades:
   - Logar qual modelo foi usado em cada chamada
 
 Providers e modelos:
-  Principal : Groq llama-3.3-70b-versatile    (GROQ_API_KEY  no .env)
-  Fallback  : Google Gemini gemini-2.5-flash  (GEMINI_API_KEY no .env)
+  Principal : Google Gemini gemini-2.5-flash  (GEMINI_API_KEY no .env)
+  Fallback  : Groq llama-3.3-70b-versatile    (GROQ_API_KEY  no .env)
 
 Uso básico nos agentes:
     from utils.llm_client import chamar_llm, parse_resposta_json
@@ -177,15 +177,15 @@ def chamar_llm(
         modelo_usado  — nome do modelo que respondeu (str | None)
         erro          — None se sucesso, mensagem amigável se falhou (str | None)
     """
-    resultado = _chamar_groq(prompt, system_prompt, max_tokens)
-    if resultado and resultado.get("texto"):
-        return resultado
-
     resultado = _chamar_gemini(prompt, system_prompt, max_tokens)
     if resultado and resultado.get("texto"):
         return resultado
 
-    log.error("Groq e Gemini falharam — retornando mensagem de indisponibilidade.")
+    resultado = _chamar_groq(prompt, system_prompt, max_tokens)
+    if resultado and resultado.get("texto"):
+        return resultado
+
+    log.error("Gemini e Groq falharam — retornando mensagem de indisponibilidade.")
     return {
         "texto":         "",
         "tokens_usados": 0,
