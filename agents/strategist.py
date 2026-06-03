@@ -170,16 +170,19 @@ class Strategist:
             "erro": None,
         }
 
-    def get_gabarito(self, questao: dict) -> dict:
+    def get_gabarito(self, questao: dict, force: bool = False) -> dict:
         """
-        Libera o gabarito comentado — apenas se as 3 dicas já foram entregues.
+        Libera o gabarito comentado.
+
+        force=True bypassa a verificação das 3 dicas (usado quando o estudante
+        acertou a questão e merece ver o comentário pedagógico mesmo sem dicas).
 
         Retorna dict com: gabarito, dicas_recebidas, tokens_usados, erro (se houver)
         """
         dicas = self._dicas_recebidas(questao)
         questao_texto = _formatar_questao(questao)
 
-        if dicas < 3:
+        if not force and dicas < 3:
             prompt = _PROMPT_GABARITO_BLOQUEADO.format(dicas_recebidas=dicas)
             resposta = self._chamar_groq(prompt)
             return {

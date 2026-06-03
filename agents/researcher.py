@@ -194,7 +194,10 @@ def pesquisar(input_usuario: str) -> dict:
         )
         answer_termos = resp_termos.get("answer", "")
         if answer_termos:
-            termos_relacionados = [answer_termos]
+            # Extrai termos curtos separados por vírgula/ponto-e-vírgula
+            import re as _re
+            candidatos = _re.split(r"[,;]", answer_termos)
+            termos_relacionados = [t.strip() for t in candidatos if 2 < len(t.strip()) < 60][:8]
 
     return {
         "tema": input_usuario,

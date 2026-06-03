@@ -82,7 +82,7 @@ def _formatar_questao(q: dict, ano: int = None) -> dict:
 
     for alt in q.get("alternatives", []):
         letra = alt.get("letter", "").upper()
-        texto = alt.get("text", "")
+        texto = alt.get("text") or ""  # None explícito da API vira ""
         if letra:
             alternativas[letra] = texto
         if alt.get("isCorrect"):
@@ -179,7 +179,7 @@ def _questao_contem_tema(q: dict, termos: list[str]) -> bool:
     texto = " ".join([
         q.get("contexto", "") or "",
         q.get("enunciado", "") or "",
-        " ".join((q.get("alternativas") or {}).values()),
+        " ".join(v for v in (q.get("alternativas") or {}).values() if v),
     ]).lower()
 
     return any(t in texto for t in termos)

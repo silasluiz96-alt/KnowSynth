@@ -60,47 +60,59 @@ def _extrair_texto_questao(q: dict) -> str:
     return "\n".join(partes)
 
 
-def _classificar_uma(questao: dict) -> dict:
+def _classificar_lote(questoes: list[dict]) -> list[dict]:
     """
-    Classifica uma única questão via Groq (com fallback automático de modelo).
-    Retorna a questão enriquecida com dificuldade e justificativa.
+    Classifica todas as questões em uma única chamada LLM (economiza até 14 requests).
+    Retorna as questões enriquecidas com dificuldade e justificativa.
     """
-    texto = _extrair_texto_questao(questao)
+    blocos = []
+    for i, q in enumerate(questoes):
+        texto = _extrair_texto_questao(q)
+        blocos.append(f"=== QUESTÃO {i} ===\n{texto}")
 
-    prompt = f"""Analise esta questão do ENEM e classifique sua complexidade.
+    prompt = f"""Analise as questões do ENEM abaixo e classifique a complexidade de cada uma.
 
-{texto}
+{chr(10).join(blocos)}
 
 CRITÉRIOS:
-- Fácil: {CRITERIOS['fácil']}
-- Médio: {CRITERIOS['médio']}
-- Difícil: {CRITERIOS['difícil']}
+- fácil: {CRITERIOS['fácil']}
+- médio: {CRITERIOS['médio']}
+- difícil: {CRITERIOS['difícil']}
 
-Responda APENAS com JSON válido, sem texto antes ou depois:
-{{
-  "dificuldade": "fácil" | "médio" | "difícil",
-  "justificativa": "explicação pedagógica em 1-2 frases"
-}}"""
+Responda APENAS com JSON válido — uma lista com exatamente {len(questoes)} objetos, na mesma ordem:
+[
+  {{"indice": 0, "dificuldade": "fácil"|"médio"|"difícil", "justificativa": "1-2 frases"}},
+  ...
+]"""
 
     r = chamar_llm(
         prompt=prompt,
         system_prompt=SYSTEM_PROMPT,
-        max_tokens=120,
+        max_tokens=min(150 * len(questoes), 2000),
     )
 
-    dificuldade   = "médio"
-    justificativa = "Classificação automática — análise indisponível."
-
+    classificacoes: dict[int, dict] = {}
     if not r["erro"]:
         dados = parse_resposta_json(r["texto"])
-        nivel = dados.get("dificuldade", "médio").lower()
-        if nivel in ("fácil", "médio", "difícil"):
-            dificuldade = nivel
-        justificativa = dados.get("justificativa", justificativa)
+        if isinstance(dados, list):
+            for item in dados:
+                idx = item.get("indice")
+                nivel = (item.get("dificuldade") or "médio").lower()
+                if idx is not None and nivel in ("fácil", "médio", "difícil"):
+                    classificacoes[idx] = {
+                        "dificuldade": nivel,
+                        "justificativa": item.get("justificativa", ""),
+                    }
 
-    resultado = dict(questao)
-    resultado["dificuldade"] = dificuldade
-    resultado["justificativa_dificuldade"] = justificativa
+    resultado = []
+    for i, q in enumerate(questoes):
+        q2 = dict(q)
+        info = classificacoes.get(i, {})
+        q2["dificuldade"] = info.get("dificuldade", "médio")
+        q2["justificativa_dificuldade"] = info.get(
+            "justificativa", "Classificação automática — análise indisponível."
+        )
+        resultado.append(q2)
     return resultado
 
 
@@ -136,11 +148,7 @@ def classificar_top3(questoes: list[dict]) -> dict:
             "erro": "GROQ_API_KEY não encontrada no arquivo .env",
         }
 
-    classificadas = []
-
-    for q in questoes:
-        classificada = _classificar_uma(q)
-        classificadas.append(classificada)
+    classificadas = _classificar_lote(questoes)
 
     # Agrupa por nível
     por_nivel: dict[str, list] = {"fácil": [], "médio": [], "difícil": []}

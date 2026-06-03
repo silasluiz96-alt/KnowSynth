@@ -13,9 +13,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Importa hooks com fallback gracioso caso o caminho mude
+_HOOKS_PATH = os.path.join(os.path.dirname(__file__), "..", ".claude", "hooks")
+if _HOOKS_PATH not in sys.path:
+    sys.path.insert(0, _HOOKS_PATH)
+
 try:
-    from .claude.hooks.hooks import (
+    from hooks import (
         pre_agent_hook,
         post_agent_hook,
         on_error_hook,
@@ -23,22 +26,12 @@ try:
         clear_session_log,
     )
 except ImportError:
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".claude", "hooks"))
-        from hooks import (
-            pre_agent_hook,
-            post_agent_hook,
-            on_error_hook,
-            get_session_log,
-            clear_session_log,
-        )
-    except ImportError:
-        # Fallback silencioso — hooks viram no-ops se não encontrados
-        def pre_agent_hook(name):          return time.time()
-        def post_agent_hook(name, t, s=True): return round(time.time() - t, 2)
-        def on_error_hook(name, err):      return str(err)
-        def get_session_log(**kw):         return "Hooks não carregados."
-        def clear_session_log():           pass
+    # Fallback silencioso — hooks viram no-ops se não encontrados
+    def pre_agent_hook(name):             return time.time()
+    def post_agent_hook(name, t, s=True): return round(time.time() - t, 2)
+    def on_error_hook(name, err):         return str(err)
+    def get_session_log(**kw):            return "Hooks não carregados."
+    def clear_session_log():              pass
 
 
 def _tempo(inicio: float) -> str:
@@ -204,10 +197,14 @@ class KnowSynth:
 
         return resultado
 
-    def request_gabarito(self, tema: str, questao: dict) -> dict:
-        """Solicita o gabarito comentado do Estrategista."""
+    def request_gabarito(self, tema: str, questao: dict, force: bool = False) -> dict:
+        """
+        Solicita o gabarito comentado do Estrategista.
+
+        force=True: bypassa verificação de 3 dicas (usar quando estudante acertou).
+        """
         t0 = pre_agent_hook("Estrategista (gabarito)")
-        resultado = self._estrategista.get_gabarito(questao)
+        resultado = self._estrategista.get_gabarito(questao, force=force)
         sucesso = not bool(resultado.get("erro"))
         post_agent_hook("Estrategista (gabarito)", t0, success=sucesso)
 
@@ -215,7 +212,7 @@ class KnowSynth:
             on_error_hook("Estrategista", resultado.get("erro", "erro desconhecido"))
         else:
             try:
-                if resultado.get("bloqueado"):
+                if not resultado.get("bloqueado"):
                     self._analista.register_gabarito(tema)
             except Exception:
                 pass

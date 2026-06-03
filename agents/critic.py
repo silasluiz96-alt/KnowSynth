@@ -141,6 +141,7 @@ def analisar(resultado_pesquisa: dict) -> dict:
         "justificativa_prioridade": analise.get("justificativa_prioridade", ""),
         "tokens_usados": tokens,
         "skill_utilizada": str(SKILL_PATH),
+        "erro": None,
     }
 
 

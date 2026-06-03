@@ -907,24 +907,41 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
         from agents.researcher  import pesquisar   as _pesquisar
         from agents.critic      import analisar     as _analisar
         from agents.synthesizer import sintetizar   as _sintetizar
+        import sys as _sys, os as _os
+        _hooks_dir = _os.path.join(_os.path.dirname(__file__), ".claude", "hooks")
+        if _hooks_dir not in _sys.path:
+            _sys.path.insert(0, _hooks_dir)
+        from hooks import pre_agent_hook, post_agent_hook, on_error_hook, clear_session_log
 
+        clear_session_log()
+
+        _t = pre_agent_hook("Pesquisador")
         r_pesquisa = _pesquisar(tema)
         if r_pesquisa.get("tipo_busca") == "erro":
+            post_agent_hook("Pesquisador", _t, success=False)
             raise RuntimeError(r_pesquisa.get("erro"))
+        post_agent_hook("Pesquisador", _t, success=True)
 
         _show("🧠 Crítico", "Analisando o que mais cai no ENEM...", 1)
+        _t = pre_agent_hook("Crítico")
         r_critica = _analisar(r_pesquisa)
         if r_critica.get("erro"):
+            post_agent_hook("Crítico", _t, success=False)
             raise RuntimeError(r_critica["erro"])
+        post_agent_hook("Crítico", _t, success=True)
 
         _show("📝 Sintetizador", "Preparando seu material personalizado com carinho...", 2)
+        _t = pre_agent_hook("Sintetizador")
         r_sintese = _sintetizar(r_pesquisa, r_critica, edu._analista.snapshot())
         if r_sintese.get("erro"):
+            post_agent_hook("Sintetizador", _t, success=False)
             raise RuntimeError(r_sintese["erro"])
+        post_agent_hook("Sintetizador", _t, success=True)
 
         edu._analista.register_search(tema)
 
         _show("🏆 ENEM API + Ranqueador", "Classificando as questões por dificuldade...", 3)
+        _t = pre_agent_hook("ENEM API + Ranqueador")
         try:
             from agents.enem_api          import search_questions_by_topic
             from agents.complexity_ranker import classificar_top3
@@ -936,7 +953,10 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
                 st.session_state["fila_questoes"] = fila
                 st.session_state["fila_idx"]      = 0
                 st.session_state["questao_atual"] = fila[0] if fila else None
-        except Exception:
+            post_agent_hook("ENEM API + Ranqueador", _t, success=True)
+        except Exception as _e_rank:
+            post_agent_hook("ENEM API + Ranqueador", _t, success=False)
+            on_error_hook("ENEM API + Ranqueador", _e_rank)
             st.session_state["fila_questoes"] = []
             st.session_state["questao_atual"] = None
 
@@ -1132,10 +1152,9 @@ if st.session_state["resultado_atual"]:
 
                 if not gabarito_vis:
                     with st.spinner("Gerando gabarito comentado..."):
-                        r = edu.request_gabarito(res["tema"], questao_gabarito)
-                    if not r.get("erro") and not r.get("bloqueado"):
+                        r = edu.request_gabarito(res["tema"], questao_gabarito, force=True)
+                    if not r.get("erro"):
                         st.session_state["gabarito_texto"] = r["gabarito"]
-                        edu._analista.register_hint(res["tema"], 0)
                         st.rerun()
 
                 if st.session_state["gabarito_texto"]:
