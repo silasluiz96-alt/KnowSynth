@@ -1,8 +1,21 @@
 import json
+import re
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
+
+
+def parse_groq_response(text: str) -> dict:
+    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return {"content": text}
 
 load_dotenv()
 
@@ -136,7 +149,7 @@ def analisar(resultado_pesquisa: dict) -> dict:
             linhas = texto.splitlines()
             texto = "\n".join(linhas[1:-1] if linhas[-1] == "```" else linhas[1:])
 
-        analise = json.loads(texto)
+        analise = parse_groq_response(texto)
 
     except json.JSONDecodeError as e:
         return _resultado_erro(

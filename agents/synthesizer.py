@@ -1,8 +1,21 @@
 import json
+import re
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
+
+
+def parse_groq_response(text: str) -> dict:
+    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return {"content": text}
 
 load_dotenv()
 
@@ -237,7 +250,22 @@ def sintetizar(
             linhas = texto.splitlines()
             texto = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
 
-        material = json.loads(texto)
+        material = parse_groq_response(texto)
+
+        # Se o parse retornou fallback {"content": ...}, extrai o texto bruto
+        # e tenta encontrar JSON embutido no meio da resposta
+        if "content" in material and "introducao" not in material:
+            import re as _re
+            texto_bruto = material["content"]
+            # Tenta encontrar bloco JSON dentro de texto livre
+            match = _re.search(r'\{[\s\S]*\}', texto_bruto)
+            if match:
+                try:
+                    material = parse_groq_response(match.group(0))
+                except Exception:
+                    pass
+            # Se ainda não tem os campos, mantém o texto bruto em "content"
+            # para que o app.py possa exibí-lo como fallback legível
 
     except json.JSONDecodeError as e:
         return _resultado_erro(tema, f"Resposta do Groq não é JSON válido: {e}")

@@ -8,6 +8,19 @@ fácil → médio → difícil, com justificativa pedagógica.
 
 import os
 import json
+import re
+
+
+def parse_groq_response(text: str) -> dict:
+    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return {"content": text}
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -93,7 +106,7 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
             linhas = texto_resp.splitlines()
             texto_resp = "\n".join(linhas[1:-1] if linhas[-1].strip() == "```" else linhas[1:])
 
-        dados = json.loads(texto_resp)
+        dados = parse_groq_response(texto_resp)
         dificuldade = dados.get("dificuldade", "médio").lower()
         if dificuldade not in ("fácil", "médio", "difícil"):
             dificuldade = "médio"

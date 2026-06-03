@@ -1,9 +1,23 @@
 import time
 import os
+import json
+import re
 from collections import defaultdict
 from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
+
+
+def parse_groq_response(text: str) -> dict:
+    """Parse seguro de JSON retornado pelo Groq — trata escapes inválidos."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return {"content": text}
 
 load_dotenv()
 

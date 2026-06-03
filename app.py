@@ -169,10 +169,107 @@ st.markdown("""
   /* Log */
   .log-box { background:#0d0d0d; border:1px solid var(--border); border-radius:10px; padding:.9rem; font-family:'Courier New',monospace; font-size:.76rem; color:#666; white-space:pre-wrap; max-height:260px; overflow-y:auto; }
 
+  /* Cards de conteúdo — fundo escuro, texto branco */
+  .content-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    margin: .5rem 0;
+    color: #ffffff;
+  }
+  .content-card p, .content-card span, .content-card li { color: #ffffff !important; }
+  .content-card b, .content-card strong { color: #ffffff !important; }
+  .content-card-cyan   { border: 1.5px solid rgba(0,245,255,.5);  box-shadow: 0 0 14px rgba(0,245,255,.1); }
+  .content-card-green  { border: 1.5px solid rgba(0,255,136,.5);  box-shadow: 0 0 14px rgba(0,255,136,.1); }
+  .content-card-purple { border: 1.5px solid rgba(157,78,221,.5); box-shadow: 0 0 14px rgba(157,78,221,.1); }
+  .content-card-yellow { border: 1.5px solid rgba(255,200,0,.5);  box-shadow: 0 0 14px rgba(255,200,0,.1); }
+
+  /* Badge da questão */
+  .questao-badge {
+    display: inline-block;
+    background: rgba(0,245,255,.08);
+    border: 1px solid rgba(0,245,255,.5);
+    border-radius: 99px;
+    padding: .25rem .9rem;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: .4px;
+    margin-bottom: .7rem;
+  }
+  .questao-badge-ai {
+    border-color: rgba(157,78,221,.5);
+    color: var(--purple);
+    background: rgba(157,78,221,.08);
+  }
+
+  /* Alternativas — botão à esquerda, texto à direita */
+  .alt-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    background: #1a1a2e;
+    border: 2.5px solid rgba(0,245,255,.45);
+    border-radius: 10px;
+    padding: .55rem .9rem;
+    margin: .35rem 0;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .alt-row:hover {
+    border-color: #00f5ff;
+    box-shadow: 0 0 14px rgba(0,245,255,.25);
+    background: rgba(0,245,255,.06);
+  }
+  .alt-letra {
+    min-width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px;
+    background: #0a0a0a;
+    border: 3px solid #00f5ff;
+    color: #00f5ff;
+    font-weight: 800;
+    font-size: .88rem;
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+  .alt-texto { color: #ffffff; font-size: .9rem; line-height: 1.5; }
+  .alt-row-correta {
+    border-color: var(--green) !important;
+    box-shadow: 0 0 16px rgba(0,255,136,.3) !important;
+    background: rgba(0,255,136,.07) !important;
+  }
+  .alt-row-correta .alt-letra { background: #0a0a0a; border-color: var(--green); color: var(--green); }
+  .alt-row-correta .alt-texto { color: #ffffff !important; }
+  .alt-row-errada {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 16px rgba(255,68,68,.3) !important;
+    background: rgba(255,68,68,.07) !important;
+  }
+  .alt-row-errada .alt-letra { background: #0a0a0a; border-color: var(--red); color: var(--red); }
+  .alt-row-errada .alt-texto { color: #ffffff !important; }
+
   /* Alternativas */
   .alt-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:.6rem 1rem; margin:.25rem 0; }
   .alt-card b { color:var(--cyan); }
   .alt-card span { color:var(--text2); }
+
+  /* Botões de letra das alternativas (col_btn) */
+  div[data-testid="column"] > div > div > div > button[kind="secondary"] {
+    background: #0a0a0a !important;
+    border: 3px solid #00f5ff !important;
+    color: #00f5ff !important;
+    font-weight: 800 !important;
+    font-size: .88rem !important;
+    border-radius: 7px !important;
+    padding: .3rem .1rem !important;
+    min-height: 36px !important;
+  }
+  div[data-testid="column"] > div > div > div > button[kind="secondary"]:hover {
+    background: rgba(0,245,255,.08) !important;
+    box-shadow: 0 0 12px rgba(0,245,255,.4) !important;
+    border-color: #00f5ff !important;
+    color: #00f5ff !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -197,6 +294,13 @@ def _init_state():
         "gabarito_texto":   None,
         "resposta_correta": False,
         "letra_escolhida":  None,
+        # Fila de questões reais (Top 3 + opcional IA)
+        "fila_questoes":    [],    # lista de dicts de questão
+        "fila_idx":         0,     # índice da questão atual na fila
+        "questao_atual":    None,  # questão sendo exibida agora
+        "oferta_ia_vista":  False, # se a oferta de questão IA já foi apresentada
+        "questao_ia_ativa": False, # se o aluno aceitou a questão IA
+        "fila_concluida":   False, # se terminou todas as questões do tema
         # Balões de temas
         "baloes_temas":     [],
         "baloes_ts":        0.0,
@@ -652,6 +756,12 @@ if iniciar and tema_digitado.strip():
         "tentativas":       0,
         "resposta_correta": False,
         "letra_escolhida":  None,
+        "fila_questoes":    [],
+        "fila_idx":         0,
+        "questao_atual":    None,
+        "oferta_ia_vista":  False,
+        "questao_ia_ativa": False,
+        "fila_concluida":   False,
     })
 
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
@@ -695,11 +805,35 @@ if iniciar and tema_digitado.strip():
         if r_sintese.get("erro"):
             raise RuntimeError(r_sintese["erro"])
 
-        barra.progress(92, text="📊 Registrando sessão...")
+        barra.progress(88, text="📊 Registrando sessão...")
         edu._analista.register_search(tema)
+
+        # Busca questões reais da enem.dev e monta a fila Top 3
+        barra.progress(92, text="📚 Buscando questões reais do ENEM...")
+        try:
+            from agents.enem_api       import search_questions_by_topic
+            from agents.complexity_ranker import classificar_top3
+
+            questoes_reais = search_questions_by_topic(tema, limit=15)
+            if questoes_reais:
+                top3 = classificar_top3(questoes_reais)
+                fila = []
+                for chave in ("facil", "medio", "dificil"):
+                    q = top3.get(chave)
+                    if q:
+                        fila.append(q)
+                st.session_state["fila_questoes"] = fila
+                st.session_state["fila_idx"]      = 0
+                st.session_state["questao_atual"] = fila[0] if fila else None
+        except Exception:
+            # Falha silenciosa — fila vazia, app usa questão sintética
+            st.session_state["fila_questoes"] = []
+            st.session_state["questao_atual"] = None
+
         barra.progress(100, text="✅ Pronto!")
         with status.container():
-            st.success(f"✅ Pronto, {nome}! Material gerado com {r_sintese.get('tokens_usados',0)} tokens.")
+            n_reais = len(st.session_state["fila_questoes"])
+            st.success(f"✅ Pronto, {nome}! Material + {n_reais} questão(ões) real(is) do ENEM carregadas.")
 
         st.session_state["resultado_atual"] = {
             "tema": tema, "pesquisa": r_pesquisa,
@@ -734,113 +868,159 @@ if st.session_state["resultado_atual"]:
 
     # ── Aba 1: Material ───────────────────────────────────────────────────────
     with aba1:
-        intro = sintese.get("introducao", "")
-        if intro:
-            st.markdown('<h3 style="color:var(--cyan)">🔍 Introdução</h3>', unsafe_allow_html=True)
-            st.markdown(f'<div class="glass-card glass-card-cyan">{intro}</div>', unsafe_allow_html=True)
 
-        pontos = sintese.get("pontos_essenciais", [])
-        if pontos:
-            st.markdown('<h3 style="color:var(--green)">⭐ Pontos Essenciais</h3>', unsafe_allow_html=True)
-            for p in pontos:
-                enem = ' <span style="color:var(--purple);font-size:.75rem">★ ENEM</span>' if p.get("cobrado_enem") else ""
+        # Detecta fallback de JSON (quando Groq retornou texto inválido)
+        _conteudo_fallback = sintese.get("content", "")
+        _tem_material = bool(
+            sintese.get("introducao") or
+            sintese.get("pontos_essenciais") or
+            sintese.get("conexoes_interdisciplinares") or
+            sintese.get("dicas_de_prova") or
+            sintese.get("leituras_recomendadas")
+        )
+
+        if not _tem_material:
+            # Exibe conteúdo bruto se JSON falhou ou campos estão todos vazios
+            if _conteudo_fallback:
+                st.markdown('<h3 style="color:var(--cyan)">📚 Material de Estudo</h3>', unsafe_allow_html=True)
                 st.markdown(
-                    f'<div class="glass-card"><b style="color:var(--text)">{p.get("conceito","")}</b>{enem}<br>'
-                    f'<span style="color:var(--text2)">{p.get("definicao","")}</span><br>'
-                    f'<span style="color:var(--text3);font-size:.8rem">Exemplo: {p.get("exemplo","")}</span></div>',
+                    f'<div class="content-card content-card-cyan">'
+                    f'<span style="color:#fff">{_conteudo_fallback}</span></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("⚠️ O material ainda está sendo processado. Tente gerar novamente.")
+        else:
+            intro = sintese.get("introducao", "")
+            if intro:
+                st.markdown('<h3 style="color:var(--cyan)">🔍 Introdução</h3>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="content-card content-card-cyan"><span style="color:#fff">{intro}</span></div>',
                     unsafe_allow_html=True,
                 )
 
-        conexoes = sintese.get("conexoes_interdisciplinares", [])
-        if conexoes:
-            st.markdown('<h3 style="color:var(--purple)">🔗 Conexões Interdisciplinares</h3>', unsafe_allow_html=True)
-            for c in conexoes:
-                with st.expander(f"📌 {c.get('disciplina','')}"):
-                    st.markdown(c.get("como_se_conecta", ""))
-                    if c.get("exemplo_enem"):
-                        st.caption(f"ENEM: {c['exemplo_enem']}")
+            pontos = sintese.get("pontos_essenciais", [])
+            if pontos:
+                st.markdown('<h3 style="color:var(--green)">⭐ Pontos Essenciais</h3>', unsafe_allow_html=True)
+                for p in pontos:
+                    enem = ' <span style="color:var(--purple);font-size:.75rem;font-weight:700">★ ENEM</span>' if p.get("cobrado_enem") else ""
+                    st.markdown(
+                        f'<div class="content-card content-card-green">'
+                        f'<b style="color:#00f5ff">{p.get("conceito","")}</b>{enem}<br>'
+                        f'<span style="color:#fff">{p.get("definicao","")}</span><br>'
+                        f'<span style="color:#e0e0e0;font-size:.8rem">Exemplo: {p.get("exemplo","")}</span></div>',
+                        unsafe_allow_html=True,
+                    )
 
-        dicas_prova = sintese.get("dicas_de_prova", [])
-        if dicas_prova:
-            st.markdown('<h3 style="color:var(--cyan)">🎯 Dicas de Prova</h3>', unsafe_allow_html=True)
-            for d in dicas_prova:
-                st.markdown(f'<div class="glass-card">💡 <span style="color:var(--text2)">{d}</span></div>', unsafe_allow_html=True)
+            conexoes = sintese.get("conexoes_interdisciplinares", [])
+            if conexoes:
+                st.markdown('<h3 style="color:var(--purple)">🔗 Conexões Interdisciplinares</h3>', unsafe_allow_html=True)
+                for c in conexoes:
+                    with st.expander(f"📌 {c.get('disciplina','')}"):
+                        st.markdown(f'<span style="color:#fff">{c.get("como_se_conecta","")}</span>', unsafe_allow_html=True)
+                        if c.get("exemplo_enem"):
+                            st.caption(f"ENEM: {c['exemplo_enem']}")
 
-        leituras = sintese.get("leituras_recomendadas", {})
-        if leituras:
-            st.markdown('<h3 style="color:var(--green)">📖 Leituras Recomendadas</h3>', unsafe_allow_html=True)
-            for ind in leituras.get("indicacoes", []):
-                st.markdown(f'<div class="glass-card"><b style="color:var(--green)">{ind.get("tipo","")}</b>: <span style="color:var(--text2)">{ind.get("titulo","")} — {ind.get("onde_encontrar","")}</span></div>', unsafe_allow_html=True)
-            kws = leituras.get("palavras_chave_scholar", [])
-            if kws:
-                st.caption(f"Google Scholar: {', '.join(kws)}")
+            dicas_prova = sintese.get("dicas_de_prova", [])
+            if dicas_prova:
+                st.markdown('<h3 style="color:var(--cyan)">🎯 Dicas de Prova</h3>', unsafe_allow_html=True)
+                for d in dicas_prova:
+                    st.markdown(
+                        f'<div class="content-card content-card-cyan">💡 <span style="color:#fff">{d}</span></div>',
+                        unsafe_allow_html=True,
+                    )
 
-        # ── Questão ENEM ──────────────────────────────────────────────────────
-        questao          = sintese.get("questao_enem", {})
-        questao_completa = sintese.get("questao_completa", questao)
-        gabarito_correto = questao_completa.get("gabarito_interno", "")
+            leituras = sintese.get("leituras_recomendadas", {})
+            if leituras:
+                st.markdown('<h3 style="color:var(--green)">📖 Leituras Recomendadas</h3>', unsafe_allow_html=True)
+                for ind in leituras.get("indicacoes", []):
+                    st.markdown(
+                        f'<div class="content-card content-card-green">'
+                        f'<b style="color:var(--green)">{ind.get("tipo","")}</b>: '
+                        f'<span style="color:#fff">{ind.get("titulo","")} — {ind.get("onde_encontrar","")}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                kws = leituras.get("palavras_chave_scholar", [])
+                if kws:
+                    st.caption(f"Google Scholar: {', '.join(kws)}")
 
-        if questao:
-            st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
-            st.markdown('<h3 style="color:var(--cyan)">📝 Questão Estilo ENEM</h3>', unsafe_allow_html=True)
+        # ── Seção de questões: fila real + opcional IA ───────────────────────
+        st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+        st.markdown('<h3 style="color:var(--cyan)">📝 Questões</h3>', unsafe_allow_html=True)
 
-            if questao.get("texto_apoio"):
+        fila          = st.session_state["fila_questoes"]
+        fila_idx      = st.session_state["fila_idx"]
+        fila_concluida = st.session_state["fila_concluida"]
+        oferta_ia     = st.session_state["oferta_ia_vista"]
+        questao_ia    = st.session_state["questao_ia_ativa"]
+
+        # Helper: reseta estado da questão atual
+        def _resetar_questao():
+            st.session_state.update({
+                "tentativas": 0, "nivel_dica_atual": 0, "dicas_texto": [],
+                "gabarito_texto": None, "resposta_correta": False, "letra_escolhida": None,
+            })
+
+        # Helper: renderiza uma questão (real ou sintética)
+        def _render_questao(questao_exibir: dict, questao_gabarito: dict):
+            gabarito_correto_q = questao_gabarito.get("gabarito_interno", "") or questao_exibir.get("gabarito", "")
+
+            # Badge
+            ano_q  = questao_exibir.get("ano")
+            is_ai  = questao_exibir.get("is_ai_generated", True)
+            dif_q  = questao_exibir.get("dificuldade", "")
+            dif_icon = {"fácil": "🟢", "médio": "🟡", "difícil": "🔴"}.get(dif_q, "")
+
+            if not is_ai and ano_q:
+                badge_txt   = f"📋 ENEM {ano_q}  {dif_icon} {dif_q.upper() if dif_q else ''}"
+                badge_class = "questao-badge"
+            else:
+                badge_txt   = f"🤖 Questão Gerada por IA — Estilo ENEM  {dif_icon} {dif_q.upper() if dif_q else ''}"
+                badge_class = "questao-badge questao-badge-ai"
+            st.markdown(f'<span class="{badge_class}">{badge_txt.strip()}</span>', unsafe_allow_html=True)
+
+            # Contexto / texto de apoio
+            contexto = questao_exibir.get("contexto") or questao_exibir.get("texto_apoio", "")
+            if contexto:
                 st.markdown(
-                    f'<div class="glass-card glass-card-purple">'
-                    f'<span style="color:var(--text3);font-size:.72rem;letter-spacing:.5px">TEXTO DE APOIO</span><br>'
-                    f'<span style="color:var(--text2)">{questao["texto_apoio"]}</span></div>',
+                    f'<div style="background:#1a1a2e;border:2.5px solid rgba(157,78,221,.5);border-radius:12px;padding:1rem 1.2rem;margin:.5rem 0">'
+                    f'<span style="color:#00f5ff;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase">Texto de Apoio</span><br><br>'
+                    f'<span style="color:#ffffff;font-size:.9rem;line-height:1.6">{contexto}</span></div>',
                     unsafe_allow_html=True,
                 )
 
-            st.markdown(f'<div class="glass-card glass-card-cyan"><b style="color:var(--text)">{questao.get("enunciado","")}</b></div>', unsafe_allow_html=True)
-
-            analise_kw = sintese.get("analise_palavras_chave", {})
-            if analise_kw:
-                with st.expander("🔎 Análise de Palavras-Chave"):
-                    enunciado_kw = analise_kw.get("no_enunciado", {})
-                    if enunciado_kw:
-                        st.markdown("**No enunciado:**")
-                        for c in enunciado_kw.get("conectivos", []):
-                            st.markdown(f"- 🔄 {c}")
-                        for d in enunciado_kw.get("delimitadores", []):
-                            st.markdown(f"- ⏱️ {d}")
-                        if enunciado_kw.get("comando"):
-                            st.markdown(f"- 🎯 Comando: {enunciado_kw['comando']}")
-                    alts_kw = analise_kw.get("nas_alternativas", {})
-                    if alts_kw:
-                        st.markdown("**Nas alternativas:**")
-                        for a in alts_kw.get("absolutismo_armadilha", []):
-                            st.markdown(f"- 🚨 {a}")
-                        for p in alts_kw.get("pegadinhas_vocabulario", []):
-                            st.markdown(f"- 🎭 {p}")
-                        if alts_kw.get("marcadores_correto"):
-                            st.markdown(f"- ✔️ {alts_kw['marcadores_correto']}")
+            enunciado = questao_exibir.get("enunciado") or questao_exibir.get("alternativesIntroduction", "")
+            if enunciado:
+                st.markdown(
+                    f'<div style="background:#1a1a2e;border:2.5px solid rgba(0,245,255,.5);border-radius:12px;padding:1rem 1.2rem;margin:.5rem 0">'
+                    f'<b style="color:#ffffff;font-size:.95rem;line-height:1.6">{enunciado}</b></div>',
+                    unsafe_allow_html=True,
+                )
 
             st.markdown("")
-
             tentativas   = st.session_state["tentativas"]
             nivel_dica   = st.session_state["nivel_dica_atual"]
             acertou      = st.session_state["resposta_correta"]
             gabarito_vis = st.session_state["gabarito_texto"]
-            alternativas = questao.get("alternativas", {})
+            alternativas = questao_exibir.get("alternativas", {})
 
             if tentativas > 0 and not acertou and not gabarito_vis:
-                st.markdown(f'<div class="metric-chip" style="display:inline-block;margin:.4rem 0">🔄 Tentativa <span>{tentativas}</span> de {nome} — não desista!</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-chip" style="display:inline-block;margin:.4rem 0">🔄 Tentativa <span>{tentativas}</span> — não desista, {nome}!</div>', unsafe_allow_html=True)
 
             for i, texto_dica in enumerate(st.session_state["dicas_texto"], start=1):
                 st.markdown(f'<div class="dica-box"><b>💡 Dica {i} para {nome}</b><br>{texto_dica}</div>', unsafe_allow_html=True)
 
-            # Acertou
+            # ── Acertou ───────────────────────────────────────────────────────
             if acertou:
                 letra = st.session_state["letra_escolhida"]
-                msg   = f"🏆 Incrível, {nome}! Acertou de primeira!" if tentativas == 1 else f"💪 {nome} acertou na {tentativas}ª tentativa — ótima persistência!"
+                msg   = f"🏆 Incrível, {nome}! Acertou de primeira!" if tentativas == 1 else f"💪 {nome} acertou na {tentativas}ª tentativa!"
                 st.markdown(f'<div class="gabarito-box"><b>✅ Correto! Alternativa {letra}</b><br>{msg}</div>', unsafe_allow_html=True)
                 if tentativas == 1:
                     st.balloons()
 
                 if not gabarito_vis:
                     with st.spinner("Gerando gabarito comentado..."):
-                        r = edu.request_gabarito(res["tema"], questao_completa)
+                        r = edu.request_gabarito(res["tema"], questao_gabarito)
                     if not r.get("erro") and not r.get("bloqueado"):
                         st.session_state["gabarito_texto"] = r["gabarito"]
                         edu._analista.register_hint(res["tema"], 0)
@@ -849,52 +1029,172 @@ if st.session_state["resultado_atual"]:
                 if st.session_state["gabarito_texto"]:
                     st.markdown(f'<div class="gabarito-box"><b>✅ Gabarito Comentado</b><br>{st.session_state["gabarito_texto"]}</div>', unsafe_allow_html=True)
 
-            # Gabarito por esgotamento
+                return True  # questão resolvida
+
+            # ── Gabarito por esgotamento ──────────────────────────────────────
             elif gabarito_vis and not acertou:
                 letra_err = st.session_state["letra_escolhida"]
                 st.markdown(f'<div class="erro-box">❌ <b>Alternativa {letra_err}</b> não era a correta, {nome}.<br><span style="color:var(--text3)">Mas não tem problema — é assim que se aprende!</span></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="gabarito-box"><b>✅ Gabarito Comentado</b><br>{gabarito_vis}</div>', unsafe_allow_html=True)
+                return True  # questão resolvida
 
-            # Alternativas clicáveis
+            # ── Alternativas clicáveis ────────────────────────────────────────
             else:
-                st.markdown(f'<p style="color:var(--text3);font-size:.82rem">👆 {nome}, escolha sua resposta:</p>', unsafe_allow_html=True)
-                cols_alt = st.columns(5)
-                for col, letra in zip(cols_alt, ["A", "B", "C", "D", "E"]):
-                    if not alternativas.get(letra):
+                st.markdown(f'<p style="color:var(--text3);font-size:.82rem;margin-bottom:.4rem">👆 {nome}, escolha sua resposta:</p>', unsafe_allow_html=True)
+                for letra in ["A", "B", "C", "D", "E"]:
+                    txt = alternativas.get(letra, "")
+                    if not txt:
                         continue
-                    with col:
-                        if st.button(f"**{letra}**", key=f"alt_{letra}_{tentativas}", use_container_width=True):
+                    col_btn, col_txt = st.columns([1, 11])
+                    with col_btn:
+                        if st.button(letra, key=f"alt_{letra}_{fila_idx}_{tentativas}", use_container_width=True):
                             st.session_state["letra_escolhida"] = letra
                             st.session_state["tentativas"] += 1
 
-                            if letra == gabarito_correto:
+                            if letra == gabarito_correto_q:
                                 st.session_state["resposta_correta"] = True
                                 edu._analista.register_hint(res["tema"], nivel_dica)
                                 st.rerun()
                             else:
                                 proximo = nivel_dica + 1
                                 if proximo <= 3:
-                                    with st.spinner(f"Preparando dica {proximo} para {nome}..."):
-                                        r = edu.request_hint(res["tema"], questao, proximo)
+                                    with st.spinner(f"Preparando dica {proximo}..."):
+                                        r = edu.request_hint(res["tema"], questao_exibir, proximo)
                                     if not r.get("erro"):
                                         st.session_state["dicas_texto"].append(r["dica"])
                                         st.session_state["nivel_dica_atual"] = proximo
                                         _atualizar_dicas_historico(res["tema"], proximo)
                                 else:
                                     with st.spinner("Liberando gabarito..."):
-                                        r = edu.request_gabarito(res["tema"], questao_completa)
+                                        r = edu.request_gabarito(res["tema"], questao_gabarito)
                                     if not r.get("erro") and not r.get("bloqueado"):
                                         st.session_state["gabarito_texto"] = r["gabarito"]
                                         st.session_state["nivel_dica_atual"] = 4
                                         edu._analista.register_gabarito(res["tema"])
                                 st.rerun()
+                    with col_txt:
+                        st.markdown(
+                            f'<div class="alt-row" style="margin-top:.15rem">'
+                            f'<span class="alt-letra">{letra}</span>'
+                            f'<span class="alt-texto">{txt}</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                return False  # questão ainda em andamento
 
-                # Texto das alternativas
+        # ── Lógica de navegação da fila ───────────────────────────────────────
+
+        # Estado: fila concluída
+        if fila_concluida:
+            st.markdown(f"""
+            <div class="glass-card glass-card-green" style="text-align:center;padding:1.5rem">
+              <div style="font-size:2rem">🏆</div>
+              <h3 style="color:var(--green)">Parabéns, {nome}!</h3>
+              <p style="color:var(--text2)">Você completou as 3 questões reais do ENEM sobre este tema.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔍 Estudar novo tema", type="primary", use_container_width=True, key="btn_novo_tema"):
+                st.session_state["resultado_atual"] = None
+                st.session_state["tema_input"]      = ""
+                st.rerun()
+
+        # Estado: oferta de questão IA (após as 3 reais)
+        elif oferta_ia and not questao_ia:
+            st.markdown(f"""
+            <div class="glass-card glass-card-purple" style="padding:1.2rem">
+              <b style="color:var(--purple)">🤖 Quer praticar mais antes do próximo tema?</b><br>
+              <span style="color:var(--text2)">Posso gerar uma questão de IA sobre <b>{res["tema"]}</b> para reforçar o aprendizado.</span>
+            </div>
+            """, unsafe_allow_html=True)
+            col_sim, col_nao = st.columns(2)
+            with col_sim:
+                if st.button("🤖 Sim, gerar questão IA", use_container_width=True):
+                    st.session_state["questao_ia_ativa"] = True
+                    _resetar_questao()
+                    st.rerun()
+            with col_nao:
+                if st.button("🔍 Não, estudar novo tema", use_container_width=True, type="primary"):
+                    st.session_state["fila_concluida"] = True
+                    st.rerun()
+
+        # Estado: questão IA ativa
+        elif questao_ia:
+            questao_sint  = sintese.get("questao_enem", {})
+            questao_comp  = sintese.get("questao_completa", questao_sint)
+            resolvida = _render_questao(questao_sint, questao_comp)
+            if resolvida and st.session_state["gabarito_texto"]:
                 st.markdown("")
-                for letra in ["A", "B", "C", "D", "E"]:
-                    txt = alternativas.get(letra, "")
-                    if txt:
-                        st.markdown(f'<div class="alt-card"><b>{letra})</b> <span>{txt}</span></div>', unsafe_allow_html=True)
+                if st.button("🔍 Estudar novo tema", type="primary", use_container_width=True, key="btn_novo_apos_ia"):
+                    st.session_state["fila_concluida"] = True
+                    st.rerun()
+
+        # Estado: questões reais da fila
+        elif fila:
+            # Indicador de progresso da fila
+            labels = ["🟢 Fácil", "🟡 Médio", "🔴 Difícil"]
+            prog_html = ""
+            for i, lbl in enumerate(labels[:len(fila)]):
+                cor = "var(--cyan)" if i == fila_idx else ("var(--green)" if i < fila_idx else "var(--text3)")
+                prog_html += f'<span style="color:{cor};font-weight:{"700" if i==fila_idx else "400"}">{lbl}</span>'
+                if i < len(fila) - 1:
+                    prog_html += ' <span style="color:#333"> → </span> '
+            st.markdown(f'<div style="margin:.4rem 0 .8rem;font-size:.82rem">{prog_html}</div>', unsafe_allow_html=True)
+
+            questao_real = fila[fila_idx]
+            resolvida    = _render_questao(questao_real, questao_real)
+
+            # Botão "Próxima" após resolução
+            if resolvida and st.session_state["gabarito_texto"]:
+                st.markdown("")
+                proxima_idx = fila_idx + 1
+                if proxima_idx < len(fila):
+                    if st.button("➡️ Próxima Questão", use_container_width=True, key="btn_proxima"):
+                        st.session_state["fila_idx"] = proxima_idx
+                        st.session_state["questao_atual"] = fila[proxima_idx]
+                        _resetar_questao()
+                        st.rerun()
+                else:
+                    # Terminou as reais → oferta IA
+                    if st.button("➡️ Continuar", use_container_width=True, key="btn_apos_reais"):
+                        st.session_state["oferta_ia_vista"] = True
+                        _resetar_questao()
+                        st.rerun()
+
+        # Fallback: fila vazia → mostra questão sintética diretamente
+        else:
+            questao_sint = sintese.get("questao_enem", {})
+            questao_comp = sintese.get("questao_completa", questao_sint)
+            if questao_sint:
+                resolvida = _render_questao(questao_sint, questao_comp)
+                if resolvida and st.session_state["gabarito_texto"]:
+                    st.markdown("")
+                    if st.button("🔍 Estudar novo tema", type="primary", use_container_width=True, key="btn_novo_fb"):
+                        st.session_state["resultado_atual"] = None
+                        st.session_state["tema_input"]      = ""
+                        st.rerun()
+
+        # Análise de palavras-chave (sempre visível para o material)
+        analise_kw = sintese.get("analise_palavras_chave", {})
+        if analise_kw:
+            with st.expander("🔎 Análise de Palavras-Chave"):
+                enunciado_kw = analise_kw.get("no_enunciado", {})
+                if enunciado_kw:
+                    st.markdown("**No enunciado:**")
+                    for c in enunciado_kw.get("conectivos", []):
+                        st.markdown(f"- 🔄 {c}")
+                    for d in enunciado_kw.get("delimitadores", []):
+                        st.markdown(f"- ⏱️ {d}")
+                    if enunciado_kw.get("comando"):
+                        st.markdown(f"- 🎯 Comando: {enunciado_kw['comando']}")
+                alts_kw = analise_kw.get("nas_alternativas", {})
+                if alts_kw:
+                    st.markdown("**Nas alternativas:**")
+                    for a in alts_kw.get("absolutismo_armadilha", []):
+                        st.markdown(f"- 🚨 {a}")
+                    for p in alts_kw.get("pegadinhas_vocabulario", []):
+                        st.markdown(f"- 🎭 {p}")
+                    if alts_kw.get("marcadores_correto"):
+                        st.markdown(f"- ✔️ {alts_kw['marcadores_correto']}")
 
     # ── Aba 2: Fontes ─────────────────────────────────────────────────────────
     with aba2:
