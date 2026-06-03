@@ -260,9 +260,10 @@ def search_questions_by_topic(topic: str, limit: int = 15) -> list[dict]:
         log.warning("get_exams() retornou vazio")
         return []
 
-    anos    = sorted([e["ano"] for e in exames if e["ano"]], reverse=True)
+    _ANOS_PERMITIDOS = {2019, 2020, 2021, 2022, 2023}
+    anos    = sorted([e["ano"] for e in exames if e["ano"] in _ANOS_PERMITIDOS], reverse=True)
     termos  = _termos_busca(topic)
-    log.info(f"search_questions_by_topic('{topic}') | termos: {termos} | anos: {anos[:5]}")
+    log.info(f"search_questions_by_topic('{topic}') | termos: {termos} | anos: {anos}")
 
     encontradas = []
 
@@ -287,7 +288,7 @@ def search_questions_by_topic(topic: str, limit: int = 15) -> list[dict]:
     if not encontradas:
         log.warning(f"Nenhuma questão encontrada para '{topic}'. Usando fallback aleatório.")
         pool = []
-        for ano in anos[:3]:
+        for ano in anos[:3]:  # fallback nos 3 anos mais recentes do intervalo permitido
             try:
                 pool.extend(_buscar_paginas(ano, max_questoes=90))
             except Exception:
