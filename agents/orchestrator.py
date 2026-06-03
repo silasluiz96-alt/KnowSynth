@@ -1,4 +1,4 @@
-import time
+﻿import time
 import sys
 import os
 
@@ -45,15 +45,15 @@ def _tempo(inicio: float) -> str:
     return f"{time.time() - inicio:.1f}s"
 
 
-class EduSynth:
+class KnowSynth:
     """
-    Orquestrador principal do pipeline EduSynth.
+    Orquestrador principal do pipeline KnowSynth.
 
     Coordena os 5 agentes em sequência com hooks de observabilidade
     executados antes e depois de cada etapa.
 
     Uso típico:
-        edu = EduSynth()
+        edu = KnowSynth()
         resultado = edu.estudar("fordismo")
         print(edu.log_sessao())
     """
@@ -245,7 +245,7 @@ class EduSynth:
 
 
 if __name__ == "__main__":
-    edu = EduSynth()
+    edu = KnowSynth()
 
     print(f"\nTema: fordismo\n{'─' * 50}\n")
     resultado = edu.estudar("fordismo", area="Ciências Humanas")
@@ -265,3 +265,4 @@ if __name__ == "__main__":
         mat = resultado["material_final"]
         print(f"\n{'═' * 50}")
         print(f"INTRODUÇÃO:\n{mat.get('introducao', '')[:400]}...")
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agente de integração com a API pública enem.dev
 https://api.enem.dev/v1
 
@@ -71,7 +71,7 @@ def _get(endpoint: str, params: dict = None) -> dict | list | None:
 
 def _formatar_questao(q: dict, ano: int = None) -> dict:
     """
-    Normaliza uma questão da API para o formato padrão EduSynth.
+    Normaliza uma questão da API para o formato padrão KnowSynth.
 
     CORREÇÃO: alternativas vêm como lista [{letter, text, isCorrect, file}]
     — não como dicionário. Gabarito lido de correctAlternative com fallback
@@ -408,3 +408,4 @@ if __name__ == "__main__":
     print(f"  {len(qs2)} questões encontradas")
     for q in qs2:
         print(f"  [{q['ano']}] {q['titulo'][:70]}")
+

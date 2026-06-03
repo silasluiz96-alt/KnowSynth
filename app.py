@@ -1,11 +1,11 @@
-import sys
+﻿import sys
 import os
 import time
 import streamlit as st
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from agents.orchestrator import EduSynth
+from agents.orchestrator import KnowSynth as EduSynth
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ def _atualizar_dicas_historico(tema: str, nivel: int):
 
 # ── Configuração da página ────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="EduSynth — ENEM",
+    page_title="KnowSynth — ENEM",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -347,14 +347,14 @@ def _formatar_tempo(segundos: int) -> str:
 if not st.session_state["logged_in"]:
     # Sidebar mínima no login
     with st.sidebar:
-        st.markdown('<p style="color:#333;font-size:.78rem">EduSynth v1</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#333;font-size:.78rem">KnowSynth v1</p>', unsafe_allow_html=True)
 
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
         st.markdown("""
         <div style="text-align:center;padding:3rem 0 2rem">
-          <div class="login-title">🎓 EduSynth</div>
-          <p class="login-sub">Seu assistente de estudos para o ENEM — Powered by Generative AI</p>
+          <div class="login-title"><span style="background:linear-gradient(90deg,#00f5ff,#9d4edd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:2.8rem;font-weight:900">KS</span> <span style="font-size:2.2rem;font-weight:900;color:#fff">KnowSynth</span></div>
+          <p class="login-sub">Synthesizing knowledge, powering learning</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -456,8 +456,8 @@ if st.session_state["sessao_encerrada"]:
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="glass-card glass-card-purple" style="text-align:center;padding:1.5rem">
-      <b style="color:var(--purple);font-size:1rem">🚀 EduSynth v2 — Em breve</b><br><br>
-      <span style="color:var(--text3)">Com o EduSynth v2, seu histórico será salvo entre sessões,
+      <b style="color:var(--purple);font-size:1rem">🚀 KnowSynth v2 — Em breve</b><br><br>
+      <span style="color:var(--text3)">Com o KnowSynth v2, seu histórico será salvo entre sessões,
       {nome}, e você terá um plano de estudos personalizado baseado na sua evolução.<br>
       Supabase · Memória persistente · Analytics avançado</span>
     </div>
@@ -521,7 +521,7 @@ with st.sidebar:
 
     st.markdown("""
     <div class="preview-v2">
-      <b>🚀 EduSynth v2 — Em breve</b><br><br>
+      <b>🚀 KnowSynth v2 — Em breve</b><br><br>
       • Histórico entre sessões<br>
       • Mapa de pontos fracos<br>
       • Plano adaptativo<br>
@@ -588,8 +588,8 @@ col_hd, col_timer = st.columns([10, 1])
 with col_hd:
     st.markdown(f"""
     <div class="edu-header">
-      <div class="edu-title">🎓 EduSynth</div>
-      <p class="edu-sub">Powered by Generative AI — 6 agentes trabalhando para você</p>
+      <div class="edu-title"><span style="font-size:2rem">KS</span> KnowSynth</div>
+      <p class="edu-sub">Synthesizing knowledge, powering learning</p><p style="font-size:.78rem;color:#555;margin:0 0 .8rem">Powered by Generative AI — 6 specialized agents</p>
       <p class="edu-greet">Olá, <b style="color:var(--cyan)">{nome}</b>! Pronto para estudar? 🚀</p>
       <div class="edu-badges">
         <span class="edu-badge">🔍 Pesquisador</span>
@@ -1327,3 +1327,4 @@ elif not iniciar:
       </div>
     </div>
     """, unsafe_allow_html=True)
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sub-agente classificador de complexidade de questões do ENEM.
 
 Recebe uma lista de questões (formato enem_api.py) e usa o Groq LLM
@@ -128,7 +128,7 @@ def classificar_top3(questoes: list[dict]) -> dict:
     fácil → médio → difícil, com justificativa pedagógica de cada uma.
 
     Parâmetros:
-        questoes: lista de dicts no formato padrão EduSynth/enem_api
+        questoes: lista de dicts no formato padrão KnowSynth/enem_api
 
     Retorna dict com:
         - facil:   questão classificada como fácil (dict com dificuldade e justificativa)
@@ -270,3 +270,4 @@ if __name__ == "__main__":
             if q:
                 print(f"{nivel}: {q['titulo']}")
                 print(f"  Justificativa: {q['justificativa_dificuldade']}\n")
+

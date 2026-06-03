@@ -1,4 +1,4 @@
-import time
+﻿import time
 import os
 import json
 import re
@@ -24,7 +24,7 @@ load_dotenv()
 SKILL_PATH = Path(__file__).parent.parent / ".claude" / "skills" / "performance_analyst.md"
 
 PREVIEW_V2 = (
-    "🚀 Em breve: com o EduSynth v2, vou lembrar do seu histórico entre sessões, "
+    "🚀 Em breve: com o KnowSynth v2, vou lembrar do seu histórico entre sessões, "
     "identificar seus pontos fracos ao longo do tempo e criar um plano de estudos "
     "personalizado para você. Acompanhe as atualizações no GitHub."
 )
@@ -314,3 +314,4 @@ if __name__ == "__main__":
     print(f"\n{PREVIEW_V2}")
     print(f"\nTokens usados: {relatorio['tokens_usados']}")
     print(f"\nTop pontos fracos: {relatorio['pontos_fracos']}")
+

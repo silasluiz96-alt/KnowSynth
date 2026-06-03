@@ -1,4 +1,4 @@
-import json
+﻿import json
 import re
 import os
 from pathlib import Path
@@ -114,7 +114,7 @@ def _serializar_desempenho(r: dict) -> str:
 
 
 def _montar_prompt(tema: str, pesquisa: str, critica: str, desempenho: str) -> str:
-    return f"""Você recebeu os outputs de todos os agentes do pipeline EduSynth sobre o tema "{tema}".
+    return f"""Você recebeu os outputs de todos os agentes do pipeline KnowSynth sobre o tema "{tema}".
 
 --- OUTPUT DO PESQUISADOR ---
 {pesquisa}
@@ -399,3 +399,4 @@ if __name__ == "__main__":
         for letra, texto in q.get("alternativas", {}).items():
             print(f"  {letra}) {texto}")
         print(f"\nGabarito interno (uso técnico): {resultado['questao_completa'].get('gabarito_interno', '')}")
+

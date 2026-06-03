@@ -1,5 +1,5 @@
-"""
-Hooks do pipeline EduSynth.
+﻿"""
+Hooks do pipeline KnowSynth.
 
 Executados antes e depois de cada agente para logging,
 rastreamento de tempo e registro de erros na sessão.
@@ -165,7 +165,7 @@ def get_session_log(formatted: bool = True) -> str | list[dict]:
     if not _session_log:
         return "📋 Log de sessão vazio — nenhum agente foi executado ainda."
 
-    linhas = ["📋 LOG DA SESSÃO EDUSYNTH", "─" * 50]
+    linhas = ["📋 LOG DA SESSÃO KnowSynth", "─" * 50]
 
     for entrada in _session_log:
         hora      = entrada.get("hora", "?")
@@ -202,3 +202,4 @@ def get_session_log(formatted: bool = True) -> str | list[dict]:
 def clear_session_log() -> None:
     """Limpa o log de sessão (útil ao iniciar um novo pipeline)."""
     _session_log.clear()
+

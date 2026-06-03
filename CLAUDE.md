@@ -1,4 +1,4 @@
-# CLAUDE.md — EduSynth Project Briefing
+﻿# CLAUDE.md — KnowSynth Project Briefing
 
 > Leia este arquivo no início de cada sessão para retomar o contexto completo do projeto.
 
@@ -6,7 +6,7 @@
 
 ## 🎯 Objetivo do Projeto
 
-O **EduSynth** é um sistema multi-agente de IA generativa que transforma qualquer tema ou palavra-chave do ENEM em material de estudo completo e personalizado.
+O **KnowSynth** é um sistema multi-agente de IA generativa que transforma qualquer tema ou palavra-chave do ENEM em material de estudo completo e personalizado.
 
 O estudante digita um tema (ex: "fordismo", "fotossíntese", "Revolução Industrial") e o sistema:
 1. Pesquisa conteúdo em fontes didáticas, jornalísticas e acadêmicas
@@ -30,7 +30,7 @@ O estudante digita um tema (ex: "fordismo", "fotossíntese", "Revolução Indust
 | Busca Web | Tavily API | 3 camadas: didático, notícias, acadêmico |
 | Runtime | Python 3.14 | Linguagem principal |
 | Env vars | python-dotenv | Carregamento do `.env` |
-| Versionamento | Git + GitHub | Repositório: silasluiz96-alt/EduSynth |
+| Versionamento | Git + GitHub | Repositório: silasluiz96-alt/KnowSynth |
 
 **Variáveis de ambiente necessárias (`.env`):**
 ```
@@ -87,7 +87,7 @@ python -m streamlit run app.py
 - **v1:** Memória limitada à sessão atual. **v2:** Supabase para memória permanente.
 
 ### Orquestrador (`agents/orchestrator.py`)
-- **Classe:** `EduSynth`
+- **Classe:** `KnowSynth`
 - **Função:** Coordena o pipeline Pesquisador → Crítico → Sintetizador → Analista
 - **Estrategista:** Ativado sob demanda via `request_hint()` e `request_gabarito()`
 - **Instância única:** `PerformanceAnalyst` e `Strategist` persistem durante toda a sessão
@@ -122,8 +122,8 @@ python -m streamlit run app.py
 - [x] Preview da v2 com Supabase na sidebar
 - [x] `.gitignore` configurado (`.env` não commitado)
 - [x] README.md profissional com arquitetura e roadmap
-- [x] Repositório no GitHub: `silasluiz96-alt/EduSynth`
-- [x] EduSynth adicionado ao README do perfil GitHub
+- [x] Repositório no GitHub: `silasluiz96-alt/KnowSynth`
+- [x] KnowSynth adicionado ao README do perfil GitHub
 
 ---
 
@@ -182,11 +182,12 @@ python -m streamlit run app.py
 - Erros são capturados e retornados em `{"erro": "mensagem"}` sem quebrar o fluxo
 - Respostas JSON do Groq têm tratamento de `json.JSONDecodeError` + remoção de blocos markdown (` ```json `)
 - `python-dotenv` com `load_dotenv()` no topo de cada agente que usa API key
-- Instâncias com estado (`Strategist`, `PerformanceAnalyst`) são criadas uma vez no `EduSynth.__init__()` e reutilizadas
+- Instâncias com estado (`Strategist`, `PerformanceAnalyst`) são criadas uma vez no `KnowSynth.__init__()` e reutilizadas
 
 ---
 
 ## 🗂️ Repositórios Relacionados
 
-- **EduSynth:** https://github.com/silasluiz96-alt/EduSynth
+- **KnowSynth:** https://github.com/silasluiz96-alt/KnowSynth
 - **Perfil GitHub:** https://github.com/silasluiz96-alt
+
