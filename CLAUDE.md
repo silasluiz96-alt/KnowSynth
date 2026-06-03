@@ -224,3 +224,50 @@ python -m streamlit run app.py
 - MCP configurado
 - Supabase + pgvector para v2 (redação ENEM)
 
+---
+
+## Sessão 3 — 03/06/2026 (noite)
+
+### Estado atual do projeto
+- Nome: KnowSynth (antes EduSynth)
+- Deploy: https://knowsynth.streamlit.app/ (funcionando)
+- Repositório: https://github.com/silasluiz96-alt/KnowSynth
+- Pasta local: C:\Users\silas\OneDrive\Desktop\knowsynth
+
+### Stack atual
+- LLM Principal: Google Gemini 2.5 Flash (google-genai 2.7.0)
+- LLM Fallback: Groq llama-3.3-70b-versatile
+- Busca web: Tavily API
+- Questões reais: enem.dev API (restrito a 2019-2023)
+- Interface: Streamlit
+- Cliente LLM centralizado: utils/llm_client.py com chamar_llm()
+
+### Arquitetura de agentes
+- agents/researcher.py — Tavily, 3 camadas de busca
+- agents/enem_api.py — questões reais ENEM 2019-2023
+- agents/complexity_ranker.py — classifica fácil/médio/difícil
+- agents/critic.py — análise crítica Professor
+- agents/synthesizer.py — material pedagógico completo
+- agents/strategist.py — 3 dicas progressivas
+- agents/performance_analyst.py — relatório de sessão
+- agents/orchestrator.py — coordena todos os agentes
+- .claude/hooks/hooks.py — pre/post/error hooks
+
+### Problemas conhecidos
+- Gemini gratuito tem limite de 20 req/min — fallback para Groq funciona
+- enem.dev API às vezes retorna 429 com muitas requisições simultâneas
+- Material de estudo às vezes aparece vazio — JSON parsing intermitente
+- Questões em espanhol/inglês filtradas mas podem escapar
+
+### Próximos passos
+- Testar fluxo completo end-to-end com Gemini + Groq
+- Corrigir erro "sequence item 0: expected str instance, NoneType found" no enem_api.py
+- Badge de deploy no README
+- Continuar commits do roadmap
+- v2: Supabase + RAG com PDFs do INEP + redação ENEM
+
+### Chaves configuradas
+- GEMINI_API_KEY: configurada no .env e Streamlit Secrets
+- GROQ_API_KEY: configurada no .env e Streamlit Secrets
+- TAVILY_API_KEY: configurada no .env e Streamlit Secrets
+
