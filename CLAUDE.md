@@ -191,3 +191,36 @@ python -m streamlit run app.py
 - **KnowSynth:** https://github.com/silasluiz96-alt/KnowSynth
 - **Perfil GitHub:** https://github.com/silasluiz96-alt
 
+---
+
+## Sessão 2 — 03/06/2026
+
+### Mudanças de identidade
+- Projeto renomeado de EduSynth para KnowSynth
+- Logo: KS como marca d'água no fundo da interface
+- Lema: "Synthesizing knowledge, powering learning"
+- Repositório: https://github.com/silasluiz96-alt/KnowSynth
+- Pasta local: C:\Users\silas\OneDrive\Desktop\knowsynth
+
+### Novos agentes adicionados
+- agents/enem_api.py — integração com enem.dev API, paginação automática, expansão de termos de busca
+- agents/complexity_ranker.py — classificação de questões em fácil/médio/difícil via LLM
+- .claude/hooks/hooks.py — hooks pre/post/error implementados
+
+### Correções aplicadas
+- JSON parsing corrigido com parse_groq_response() em todos os agentes
+- enem.dev API corrigida: formato de alternativas, paginação, fallback
+- Modelo atualizado de mixtral-8x7b-32768 para llama-3.3-70b-versatile
+- Marca d'água KS via HTML injetado (body::before não funciona no Streamlit)
+
+### Stack atual
+- Python + Groq (llama-3.3-70b-versatile) + Tavily + Streamlit
+- enem.dev API para questões reais
+- 6 agentes + hooks + 5 skills
+
+### Próximos passos
+- Deploy no Streamlit Cloud
+- Sub-agents nativos do Claude Code
+- MCP configurado
+- Supabase + pgvector para v2 (redação ENEM)
+
