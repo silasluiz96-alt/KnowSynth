@@ -2,12 +2,9 @@
 Utilitário centralizado de chamadas ao Groq com fallback automático de modelo.
 
 Ordem de tentativa em caso de rate limit (429):
-  1. llama-3.3-70b-versatile  ← modelo principal, mais capaz
-  2. gemma2-9b-it              ← fallback robusto (TPM generoso)
-  3. llama3-70b-8192           ← terceiro recurso (contexto menor, mas confiável)
-
-NOTA: llama-3.1-8b-instant foi removido — limite de 6.000 TPM é insuficiente
-para prompts do KnowSynth (~7.000 tokens por requisição).
+  1. llama-3.3-70b-versatile   ← modelo principal, mais capaz
+  2. llama3-70b-8192            ← fallback 1
+  3. mixtral-8x22b-instruct     ← fallback 2
 
 Nos modelos de fallback (2º e 3º), o prompt é automaticamente enxugado:
   - system: truncado em 2.000 chars (mantém instruções essenciais do topo)
@@ -30,8 +27,8 @@ _MODELO_PRINCIPAL = "llama-3.3-70b-versatile"
 
 # Fallbacks — usam prompt enxugado e max_tokens limitado
 _MODELOS_FALLBACK = [
-    "gemma2-9b-it",
     "llama3-70b-8192",
+    "mixtral-8x22b-instruct",
 ]
 
 # Limites de truncamento para fallbacks
