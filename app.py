@@ -25,6 +25,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Marca d'água KS ───────────────────────────────────────────────────────────
+st.markdown("""
+    <div style="
+        position: fixed;
+        top: 50%;
+        left: 55%;
+        transform: translate(-50%, -50%);
+        font-size: 22vw;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.07);
+        z-index: 0;
+        pointer-events: none;
+        user-select: none;
+        letter-spacing: -0.05em;
+        font-family: Arial Black, sans-serif;
+    ">KS</div>
+""", unsafe_allow_html=True)
+
 # ── CSS Dark/Neon Global ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -101,6 +119,7 @@ st.markdown("""
   div[data-testid="stWarning"]{ background: rgba(255,200,0,.06) !important;  border-left-color: var(--yellow) !important; color: var(--text2) !important; }
   hr { border-color: var(--border) !important; }
   #MainMenu, footer { visibility: hidden; }
+
 
   /* ── Componentes customizados ── */
   .neon-divider { height:1px; background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),transparent); border:none; margin:1.2rem 0; opacity:.45; }
@@ -353,7 +372,7 @@ if not st.session_state["logged_in"]:
     with col_c:
         st.markdown("""
         <div style="text-align:center;padding:3rem 0 2rem">
-          <div class="login-title"><span style="background:linear-gradient(90deg,#00f5ff,#9d4edd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:2.8rem;font-weight:900">KS</span> <span style="font-size:2.2rem;font-weight:900;color:#fff">KnowSynth</span></div>
+          <div class="login-title">KnowSynth</div>
           <p class="login-sub">Synthesizing knowledge, powering learning</p>
         </div>
         """, unsafe_allow_html=True)
@@ -588,7 +607,7 @@ col_hd, col_timer = st.columns([10, 1])
 with col_hd:
     st.markdown(f"""
     <div class="edu-header">
-      <div class="edu-title"><span style="font-size:2rem">KS</span> KnowSynth</div>
+      <div class="edu-title">KnowSynth</div>
       <p class="edu-sub">Synthesizing knowledge, powering learning</p><p style="font-size:.78rem;color:#555;margin:0 0 .8rem">Powered by Generative AI — 6 specialized agents</p>
       <p class="edu-greet">Olá, <b style="color:var(--cyan)">{nome}</b>! Pronto para estudar? 🚀</p>
       <div class="edu-badges">
