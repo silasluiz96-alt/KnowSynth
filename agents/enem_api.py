@@ -40,15 +40,16 @@ _DISCIPLINE_SLUGS_IDIOMA = {
     "ingles-ingles", "espanhol-espanhol", "foreign-language",
 }
 
-# Stopwords comuns em português para heurística de idioma
-# Se o texto tiver menos de 12% dessas palavras, provavelmente não é PT
-_STOPWORDS_PT = {
-    "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas",
-    "a", "o", "as", "os", "e", "que", "um", "uma", "com", "para",
-    "por", "se", "não", "mas", "são", "foi", "esta", "este", "como",
-    "mais", "também", "ou", "seu", "sua", "seus", "suas", "pelo", "pela",
-    "ao", "aos", "às", "há", "ser", "ter", "ele", "ela", "eles", "elas",
-    "eu", "tu", "nós", "vós", "me", "te", "lhe", "nos", "já", "quando",
+# Palavras-gatilho para detecção de inglês (3+ ocorrências → inglês)
+_PALAVRAS_INGLES = {
+    "the", "is", "are", "was", "were", "have", "has", "that", "this",
+    "with", "from", "they", "their", "would", "could", "should",
+}
+
+# Palavras-gatilho para detecção de espanhol (3+ ocorrências → espanhol)
+_PALAVRAS_ESPANHOL = {
+    "que", "una", "del", "los", "las", "con", "para", "por", "como",
+    "pero", "más", "también",
 }
 
 # Mapa de termos expandidos para busca por tema
@@ -83,32 +84,31 @@ def _detectar_idioma_estrangeiro(questao: dict) -> bool:
     Retorna True se a questão é de língua estrangeira (inglês ou espanhol).
 
     Critérios (qualquer um suficiente):
-    1. Campo discipline_slug contém slug de idioma estrangeiro
-    2. Texto contém ¿ ou ¡ (marcadores espanhóis)
-    3. Contexto tem menos de 12% de stopwords PT → provavelmente idioma estrangeiro
+    1. discipline_slug contém slug de idioma estrangeiro
+    2. Texto contém ¿ ou ¡ → espanhol
+    3. 3+ palavras-gatilho de inglês no texto de apoio → inglês
+    4. 3+ palavras-gatilho de espanhol no texto de apoio → espanhol
     """
     # Critério 1: slug da disciplina
     disc = (questao.get("disciplina_slug", "") or "").lower().replace(" ", "-")
     if any(slug in disc for slug in _DISCIPLINE_SLUGS_IDIOMA):
         return True
 
-    texto_completo = " ".join([
-        questao.get("contexto", "") or "",
-        questao.get("enunciado", "") or "",
-    ])
+    contexto = (questao.get("contexto", "") or "").lower()
+    texto_completo = contexto + " " + (questao.get("enunciado", "") or "").lower()
 
     # Critério 2: caracteres exclusivos do espanhol
     if "¿" in texto_completo or "¡" in texto_completo:
         return True
 
-    # Critério 3: proporção baixa de stopwords portuguesas no contexto
-    contexto = questao.get("contexto", "") or ""
-    if len(contexto) > 80:
-        palavras = re.sub(r"[^\w\s]", "", contexto.lower()).split()
-        if palavras:
-            pt_ratio = sum(1 for p in palavras if p in _STOPWORDS_PT) / len(palavras)
-            if pt_ratio < 0.12:
-                return True
+    # Critério 3: palavras-gatilho de inglês (3+ hits)
+    palavras = set(re.sub(r"[^\w\s]", "", contexto).split())
+    if sum(1 for p in _PALAVRAS_INGLES if p in palavras) >= 3:
+        return True
+
+    # Critério 4: palavras-gatilho de espanhol (3+ hits)
+    if sum(1 for p in _PALAVRAS_ESPANHOL if p in palavras) >= 3:
+        return True
 
     return False
 
@@ -517,32 +517,40 @@ def search_language_questions(language: str, limit: int = 10) -> list[dict]:
     anos = sorted([e["ano"] for e in exames if e["ano"] in _ANOS_PERMITIDOS], reverse=True)
     log.info(f"search_language_questions('{language}') | anos: {anos}")
 
-    brutas = []
+    _META = 6  # para ao encontrar este número de questões do idioma correto
+
+    def _eh_idioma_certo(q: dict) -> bool:
+        txt = " ".join([q.get("contexto", "") or "", q.get("enunciado", "") or ""])
+        if language == "espanhol":
+            palavras = set(re.sub(r"[^\w\s]", "", txt.lower()).split())
+            return ("¿" in txt or "¡" in txt or
+                    sum(1 for p in _PALAVRAS_ESPANHOL if p in palavras) >= 3)
+        # ingles: sem marcadores espanhóis + hits de inglês
+        palavras = set(re.sub(r"[^\w\s]", "", txt.lower()).split())
+        return ("¿" not in txt and "¡" not in txt and
+                sum(1 for p in _PALAVRAS_INGLES if p in palavras) >= 3)
+
+    idioma_questoes: list[dict] = []
+
     for ano in anos:
+        if len(idioma_questoes) >= _META:
+            break
         try:
-            questoes_ano = _buscar_paginas(ano, max_questoes=15)
-            brutas.extend(questoes_ano)
-            log.info(f"  {len(questoes_ano)} questões coletadas do ano {ano}")
+            # Apenas primeira página (limit=45, offset=0) — sem _buscar_paginas
+            dados = _get(f"/exams/{ano}/questions", params={"limit": 45, "offset": 0})
+            if not dados:
+                continue
+            for q in dados.get("questions", []):
+                qf = _formatar_questao(q, ano=ano)
+                if _detectar_idioma_estrangeiro(qf) and _eh_idioma_certo(qf):
+                    idioma_questoes.append(qf)
+                    if len(idioma_questoes) >= _META:
+                        break
+            log.info(f"  ano={ano} → {len(idioma_questoes)} questões de {language} acumuladas")
         except Exception as e:
             log.warning(f"  Erro ao buscar ano {ano}: {e}")
 
-    # Mantém apenas questões de idioma estrangeiro
-    idioma_questoes = [q for q in brutas if _detectar_idioma_estrangeiro(q)]
-    log.info(f"  {len(idioma_questoes)} questões de idioma detectadas (total brutas: {len(brutas)})")
-
-    # Refina por idioma específico
-    if language == "espanhol":
-        def _eh_espanhol(q):
-            txt = " ".join([q.get("contexto", "") or "", q.get("enunciado", "") or ""])
-            return "¿" in txt or "¡" in txt
-        idioma_questoes = [q for q in idioma_questoes if _eh_espanhol(q)]
-    elif language == "ingles":
-        def _eh_ingles(q):
-            txt = " ".join([q.get("contexto", "") or "", q.get("enunciado", "") or ""])
-            return "¿" not in txt and "¡" not in txt
-        idioma_questoes = [q for q in idioma_questoes if _eh_ingles(q)]
-
-    log.info(f"  {len(idioma_questoes)} questões de {language} após filtro específico")
+    log.info(f"  Total final: {len(idioma_questoes)} questões de {language}")
 
     if not idioma_questoes:
         log.warning(f"Nenhuma questão de {language} encontrada nos anos {anos}.")
