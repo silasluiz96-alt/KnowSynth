@@ -1025,7 +1025,11 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
             from agents.enem_api          import search_questions_by_topic, search_language_questions
             from agents.complexity_ranker import classificar_top3
 
-            if _modo_idioma_pipeline:
+            if _modo_idioma_pipeline == "ingles":
+                # enem.dev não disponibiliza questões de inglês com marcação confiável
+                # → vai direto para a questão gerada pelo Sintetizador
+                questoes_reais = []
+            elif _modo_idioma_pipeline == "espanhol":
                 questoes_reais = search_language_questions(_modo_idioma_pipeline)
             else:
                 questoes_reais = search_questions_by_topic(tema, limit=15)
