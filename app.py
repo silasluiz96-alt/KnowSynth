@@ -769,13 +769,13 @@ _carregando_agora = st.session_state.get("carregando", False)
 _spc, _col_en, _col_es, _spc2 = st.columns([2, 1, 1, 2])
 
 with _col_en:
-    if st.button("🇬🇧 EN Inglês", key="btn_lang_ingles", use_container_width=True, disabled=_carregando_agora):
+    if st.button("en — Inglês", key="btn_lang_ingles", use_container_width=True, disabled=_carregando_agora):
         st.session_state["lang_clicada"] = "ingles"
         st.session_state["tema_input"]   = "Inglês ENEM"
         st.rerun()
 
 with _col_es:
-    if st.button("🇪🇸 ES Espanhol", key="btn_lang_espanhol", use_container_width=True, disabled=_carregando_agora):
+    if st.button("es — Espanhol", key="btn_lang_espanhol", use_container_width=True, disabled=_carregando_agora):
         st.session_state["lang_clicada"] = "espanhol"
         st.session_state["tema_input"]   = "Espanhol ENEM"
         st.rerun()
