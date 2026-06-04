@@ -74,10 +74,10 @@ TEMA_DISCIPLINA: dict[str, str] = {
 
 # Offset inicial por disciplina (onde as questões dessa disciplina começam na prova)
 _OFFSET_DISCIPLINA: dict[str, int] = {
-    "linguagens":       0,
-    "ciencias-humanas": 43,
+    "linguagens":        0,
+    "ciencias-humanas":  29,
     "ciencias-natureza": 90,
-    "matematica":       135,
+    "matematica":        127,
 }
 
 # Mapa tema → palavras-chave para filtro de texto (sem LLM)
