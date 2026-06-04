@@ -340,7 +340,7 @@ def search_questions_by_topic(topic: str, limit: int = 10) -> list[dict]:
         if len(brutas) >= budget:
             break
         try:
-            todas_do_ano = _buscar_paginas(ano, max_questoes=90)
+            todas_do_ano = _buscar_paginas(ano, max_questoes=15)
             brutas.extend(todas_do_ano)
             log.info(f"  Coletadas {len(todas_do_ano)} brutas do ano {ano}")
         except Exception as e:
