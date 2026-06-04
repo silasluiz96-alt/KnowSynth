@@ -199,12 +199,44 @@ def chamar_llm(
     }
 
 
+def _fix_json_newlines(s: str) -> str:
+    """
+    Substitui quebras de linha literais dentro de strings JSON por \\n.
+
+    O LLM frequentemente escreve campos multi-parágrafo com newlines reais
+    dentro das aspas — isso é JSON inválido. Esta função percorre o texto
+    caractere a caractere e corrige apenas os newlines que estão dentro de
+    uma string (entre aspas duplas não escapadas).
+    """
+    result = []
+    in_string = False
+    escaped = False
+    for ch in s:
+        if escaped:
+            result.append(ch)
+            escaped = False
+        elif ch == "\\" and in_string:
+            result.append(ch)
+            escaped = True
+        elif ch == '"':
+            in_string = not in_string
+            result.append(ch)
+        elif ch == "\n" and in_string:
+            result.append("\\n")
+        elif ch == "\r" and in_string:
+            result.append("\\r")
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
 def parse_resposta_json(texto: str) -> dict:
     """
     Faz parse seguro de JSON retornado por qualquer LLM.
 
     Trata:
     - Blocos de código markdown  (```json ... ```)
+    - Newlines literais dentro de strings JSON (causa mais comum de falha)
     - Escapes inválidos do Groq  (\\x não reconhecidos)
     - JSON embutido em texto livre
 
@@ -229,9 +261,22 @@ def parse_resposta_json(texto: str) -> dict:
     except json.JSONDecodeError:
         pass
 
+    # Corrige newlines literais dentro de strings JSON (causa mais comum)
+    try:
+        return json.loads(_fix_json_newlines(t))
+    except json.JSONDecodeError:
+        pass
+
     # Tenta corrigir escapes inválidos (comum no Groq)
     try:
         cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', t)
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Combina as duas correções
+    try:
+        cleaned = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', _fix_json_newlines(t))
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
@@ -240,7 +285,7 @@ def parse_resposta_json(texto: str) -> dict:
     match = re.search(r'\{[\s\S]*\}', t)
     if match:
         try:
-            return json.loads(match.group(0))
+            return json.loads(_fix_json_newlines(match.group(0)))
         except json.JSONDecodeError:
             pass
 
