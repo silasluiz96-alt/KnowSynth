@@ -1,224 +1,236 @@
-# 🎓 EduSynth — Assistente de Estudos para o ENEM
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://knowsynth.streamlit.app/)
+![Python](https://img.shields.io/badge/Python-3.14-blue)
+![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash_Lite-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-> Sistema multi-agente de IA que pesquisa, analisa criticamente e gera material de estudo personalizado para estudantes do ENEM — em segundos.
+# KnowSynth
 
----
+> *Synthesizing knowledge, powering learning.*
 
-## 📌 Sobre o Projeto
-
-O **EduSynth** é uma aplicação web que combina **6 agentes de inteligência artificial** trabalhando em pipeline para transformar qualquer tema ou palavra-chave do ENEM em um material de estudo completo, com questão original, análise estratégica e dicas progressivas para resolução.
-
-Ao digitar um tema como *"fordismo"* ou *"aquecimento global"*, o sistema:
-
-1. **Pesquisa** conteúdo em fontes didáticas, jornalísticas e acadêmicas
-2. **Analisa criticamente** a frequência do tema no ENEM, erros comuns e conexões interdisciplinares
-3. **Sintetiza** um material original com introdução, pontos essenciais e questão estilo ENEM
-4. **Guia** o estudante na resolução com 3 dicas progressivas antes de liberar o gabarito
-5. **Acompanha** o desempenho da sessão e recomenda prioridades de estudo
+KnowSynth is a multi-agent Generative AI system with 6 specialized LLM agents that collaborate in real time to create personalized ENEM study materials.
 
 ---
 
-## 🏗️ Arquitetura dos Agentes
+## Architecture
 
 ```
-Usuário (input: tema ou palavra-chave)
-         │
-         ▼
-┌─────────────────────────────────────────────────────┐
-│                   ORCHESTRATOR                       │
-│          Coordena o pipeline em sequência            │
-└──────┬──────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────┐
-│  🔍 PESQUISADOR  │  ← Tavily API
-│  researcher.py  │
-│                 │  • Detecta: tema amplo vs palavra-chave
-│                 │  • Camada 1: fontes didáticas
-│                 │  • Camada 2: notícias recentes
-│                 │  • Camada 3: referências acadêmicas
-└────────┬────────┘
-         │ resultado_pesquisa
-         ▼
-┌─────────────────┐
-│   🧠 CRÍTICO     │  ← Groq (LLaMA 3.3 70B)
-│    critic.py    │
-│                 │  • Frequência e relevância no ENEM
-│                 │  • Erros mais comuns dos estudantes
-│                 │  • Conexões interdisciplinares
-│                 │  • Pontos críticos obrigatórios
-│                 │  • Nível de prioridade: alta/média/baixa
-└────────┬────────┘
-         │ resultado_critica
-         ▼
-┌─────────────────┐
-│  📝 SINTETIZADOR │  ← Groq (LLaMA 3.3 70B)
-│  synthesizer.py │
-│                 │  • Introdução acessível
-│                 │  • 5 pontos essenciais
-│                 │  • Conexões interdisciplinares
-│                 │  • Questão original estilo ENEM
-│                 │  • Análise de palavras-chave
-│                 │  • Dicas de prova + leituras
-└────────┬────────┘
-         │ material_final
-         ▼
-┌─────────────────┐     ┌──────────────────────┐
-│  💡 ESTRATEGISTA │     │  📊 ANALISTA           │
-│  strategist.py  │     │  performance_analyst  │
-│                 │     │                      │
-│  • Dica nível 1 │     │  • Rastreia sessão   │
-│  • Dica nível 2 │     │  • Classifica        │
-│  • Dica nível 3 │     │    dificuldade       │
-│  • Gabarito só  │     │  • Gera relatório    │
-│    após 3 dicas │     │    ao final          │
-└─────────────────┘     └──────────────────────┘
-         │                        │
-         └────────────┬───────────┘
-                      ▼
-             Interface Streamlit
-                  app.py
+┌─────────────────────────────────────────────────────────────────┐
+│                        User Input                               │
+│              (topic or keyword — e.g. "fordism")                │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       ORCHESTRATOR                              │
+│               orchestrator.py — KnowSynth class                 │
+│         Coordinates the full pipeline with hooks                │
+└───┬──────────────┬────────────────────────┬──────────────────┬──┘
+    │              │                        │                  │
+    ▼              ▼                        ▼                  ▼
+┌────────┐   ┌──────────┐           ┌────────────┐   ┌──────────────┐
+│  🔍    │   │  📚      │           │  🧠        │   │  📝          │
+│Researcher│ │ ENEM API │           │  Critic    │   │ Synthesizer  │
+│        │   │          │           │            │   │              │
+│Tavily  │   │enem.dev  │           │Gemini /    │   │Gemini /      │
+│3-layer │   │2021–2023 │           │Groq        │   │Groq          │
+│search  │   │real Qs   │           │            │   │              │
+└───┬────┘   └────┬─────┘           └─────┬──────┘   └──────┬───────┘
+    │             │                       │                  │
+    │             ▼                       │                  │
+    │      ┌────────────┐                 │                  │
+    │      │  🏆        │                 │                  │
+    │      │ Complexity │                 │                  │
+    │      │  Ranker    │                 │                  │
+    │      │(heuristic) │                 │                  │
+    │      └────┬───────┘                 │                  │
+    │           │                         │                  │
+    └─────┬─────┘                         │                  │
+          │          ┌────────────────────┘                  │
+          │          │          ┌────────────────────────────┘
+          │          │          │
+          ▼          ▼          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Streamlit Interface                         │
+│  Material tabs · Question queue (easy→medium→hard) · Timer      │
+│  Progressive hints · Session analytics · Dark/Neon UI           │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+               ┌───────────────┴───────────────┐
+               ▼                               ▼
+      ┌──────────────────┐          ┌──────────────────────┐
+      │  💡 Strategist   │          │  📊 Performance      │
+      │                  │          │     Analyst          │
+      │ 3 progressive    │          │                      │
+      │ hints before     │          │ Tracks difficulty,   │
+      │ answer release   │          │ hints, session time  │
+      └──────────────────┘          └──────────────────────┘
 ```
 
-### Skills dos Agentes
+---
 
-Cada agente carrega seu comportamento de um arquivo Markdown em `.claude/skills/`:
+## Agents
 
-| Arquivo | Agente | Função |
+| Agent | File | Technology | Role |
+|---|---|---|---|
+| 🔍 **Researcher** | `agents/researcher.py` | Tavily API | 3-layer semantic web search: didactic sources, news, academic references |
+| 📚 **ENEM API** | `agents/enem_api.py` | enem.dev API | Fetches real ENEM questions (2021–2023) filtered by topic and discipline |
+| 🏆 **Complexity Ranker** | `agents/complexity_ranker.py` | Local heuristics | Classifies questions into easy / medium / hard with zero LLM calls |
+| 🧠 **Critic** | `agents/critic.py` | Gemini 2.5 Flash-Lite / Groq | Strategic analysis: ENEM frequency, common mistakes, interdisciplinary links |
+| 📝 **Synthesizer** | `agents/synthesizer.py` | Gemini 2.5 Flash-Lite / Groq | Generates the full study material: introduction, key points, ENEM-style question |
+| 💡 **Strategist** | `agents/strategist.py` | Gemini 2.5 Flash-Lite / Groq | Delivers 3 progressive hints; answer only released after hint 3 |
+| 📊 **Performance Analyst** | `agents/performance_analyst.py` | Gemini 2.5 Flash-Lite / Groq | Tracks session behavior and generates a personalized end-of-session report |
+
+> The Orchestrator (`agents/orchestrator.py`) coordinates the full pipeline and exposes `estudar()`, `request_hint()`, `request_gabarito()`, and `relatorio_sessao()`.
+
+---
+
+## Tech Stack
+
+| Technology | Version | Purpose |
 |---|---|---|
-| `researcher.md` | Pesquisador | Define as 3 camadas de busca e gestão de lacunas |
-| `critic.md` | Crítico | Define a análise estratégica para o ENEM |
-| `synthesizer.md` | Sintetizador | Define o formato do material de estudo |
-| `strategist.md` | Estrategista | Define o sistema de dicas progressivas |
-| `performance_analyst.md` | Analista | Define rastreamento e relatório de sessão |
+| Python | 3.14 | Runtime |
+| Streamlit | latest | Web interface |
+| Google Gemini | 2.5 Flash-Lite | Primary LLM (free tier) |
+| Groq — LLaMA 3.3 70B | `llama-3.3-70b-versatile` | Fallback LLM |
+| Tavily | latest | Semantic web search |
+| enem.dev API | v1 | Real ENEM question bank (2009–2023) |
+| python-dotenv | latest | Environment variable management |
+| google-genai | 2.7.0 | Gemini SDK |
 
 ---
 
-## 🛠️ Tecnologias
+## How It Works
 
-| Tecnologia | Uso |
-|---|---|
-| **Python 3.12+** | Linguagem principal |
-| **Streamlit** | Interface web |
-| **Groq API** | LLM para análise, síntese e estratégia (LLaMA 3.3 70B) |
-| **Tavily API** | Busca web em 3 camadas (didático, notícias, acadêmico) |
-| **python-dotenv** | Gerenciamento de variáveis de ambiente |
+**1. Search** — The Researcher calls Tavily across 3 layers: didactic sites (Brasil Escola, Khan Academy), recent news (G1, BBC Brasil), and academic sources (SciELO, Google Scholar).
+
+**2. Critical Analysis** — The Critic evaluates how often the topic appears in ENEM, the most common student mistakes, and which interdisciplinary connections are most likely to be tested.
+
+**3. Synthesis** — The Synthesizer combines research + critique + the student's current session performance to generate a complete study material: introduction, key concepts, interdisciplinary links, an original ENEM-style question, and study tips.
+
+**4. Real Questions** — The ENEM API fetches official questions from 2021–2023. The Complexity Ranker classifies them locally into easy / medium / hard with no API calls. The student works through the queue in ascending difficulty.
+
+**5. Progressive Hints** — Every wrong answer unlocks one hint from the Strategist. The answer commentary is only released after 3 hints (or when the student gets it right). The Performance Analyst records everything and produces a personalized report at the end of the session.
 
 ---
 
-## 🚀 Como Rodar Localmente
+## Getting Started
 
-### Pré-requisitos
+### Prerequisites
 
-- Python 3.12 ou superior
-- Conta gratuita no [Groq](https://console.groq.com) para obter a `GROQ_API_KEY`
-- Conta gratuita no [Tavily](https://tavily.com) para obter a `TAVILY_API_KEY`
+- Python 3.11+
+- Free [Groq](https://console.groq.com) account → `GROQ_API_KEY`
+- Free [Tavily](https://tavily.com) account → `TAVILY_API_KEY`
+- Free [Google AI Studio](https://aistudio.google.com) account → `GEMINI_API_KEY`
 
-### Passo a passo
+### Installation
 
-**1. Clone o repositório**
 ```bash
-git clone https://github.com/silasluiz96-alt/EduSynth.git
-cd EduSynth
-```
+# 1. Clone the repository
+git clone https://github.com/silasluiz96-alt/KnowSynth.git
+cd KnowSynth
 
-**2. Instale as dependências**
-```bash
+# 2. Install dependencies
 pip install -r requirements.txt
+
+# 3. Set up environment variables
+# Create a .env file in the project root:
+GEMINI_API_KEY=your_gemini_key_here
+GROQ_API_KEY=your_groq_key_here
+TAVILY_API_KEY=your_tavily_key_here
 ```
 
-**3. Configure as variáveis de ambiente**
+### Running Locally
 
-Crie um arquivo `.env` na raiz do projeto:
-```env
-GROQ_API_KEY=sua_chave_groq_aqui
-TAVILY_API_KEY=sua_chave_tavily_aqui
-```
-
-**4. Rode o app**
 ```bash
 python -m streamlit run app.py
 ```
 
-**5. Acesse no navegador**
+Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+### Deploy on Streamlit Cloud
+
+1. Fork this repository
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
+3. Select your fork, branch `main`, file `app.py`
+4. Under **Advanced settings → Secrets**, add:
+```toml
+GEMINI_API_KEY = "your_key"
+GROQ_API_KEY   = "your_key"
+TAVILY_API_KEY = "your_key"
 ```
-http://localhost:8501
-```
+5. Click **Deploy** — the app will be live in ~2 minutes
 
 ---
 
-## 📁 Estrutura do Projeto
+## Project Structure
 
 ```
-EduSynth/
-├── .claude/
-│   ├── settings.json          # Configurações do projeto
-│   └── skills/
-│       ├── researcher.md      # Skill do Pesquisador
-│       ├── critic.md          # Skill do Crítico
-│       ├── synthesizer.md     # Skill do Sintetizador
-│       ├── strategist.md      # Skill do Estrategista
-│       └── performance_analyst.md  # Skill do Analista
-├── agents/
-│   ├── researcher.py          # Agente Pesquisador (Tavily)
-│   ├── critic.py              # Agente Crítico (Groq)
-│   ├── synthesizer.py         # Agente Sintetizador (Groq)
-│   ├── strategist.py          # Agente Estrategista (Groq)
-│   ├── performance_analyst.py # Agente Analista (Groq)
-│   └── orchestrator.py        # Orquestrador do pipeline
-├── app.py                     # Interface Streamlit
+knowsynth/
+├── app.py                          # Streamlit interface (single-page app)
 ├── requirements.txt
-├── .env                       # Não commitado — chaves locais
-└── .gitignore
+├── .env                            # Not committed — local API keys
+├── .gitignore
+│
+├── agents/
+│   ├── orchestrator.py             # Pipeline coordinator — KnowSynth class
+│   ├── researcher.py               # Researcher agent (Tavily)
+│   ├── enem_api.py                 # ENEM API agent (enem.dev)
+│   ├── complexity_ranker.py        # Question difficulty classifier (local heuristics)
+│   ├── critic.py                   # Critic agent (Gemini / Groq)
+│   ├── synthesizer.py              # Synthesizer agent (Gemini / Groq)
+│   ├── strategist.py               # Strategist agent (Gemini / Groq)
+│   └── performance_analyst.py      # Performance Analyst agent (Gemini / Groq)
+│
+├── utils/
+│   ├── __init__.py
+│   └── llm_client.py               # Centralized LLM client (Gemini → Groq fallback)
+│
+└── .claude/
+    ├── hooks/
+    │   └── hooks.py                # Pre/post/error observability hooks
+    └── skills/
+        ├── researcher.md           # Researcher agent behavior spec
+        ├── critic.md               # Critic agent behavior spec
+        ├── synthesizer.md          # Synthesizer agent behavior spec
+        ├── strategist.md           # Strategist agent behavior spec
+        └── performance_analyst.md  # Performance Analyst behavior spec
 ```
 
 ---
 
-## 🗺️ Roadmap — EduSynth v2
+## Roadmap
 
-### 🔐 Autenticação e Perfil
-- [ ] Login com Google via Supabase Auth
-- [ ] Perfil do estudante com área de interesse e nível
+### v1 — Current (multi-agent study assistant)
+- [x] 6 specialized agents coordinated by an orchestrator
+- [x] 3-layer web search (didactic, news, academic)
+- [x] Real ENEM question bank (2021–2023) with difficulty classification
+- [x] 3 progressive hints before answer release
+- [x] Session performance tracking and end-of-session report
+- [x] Dark/Neon Streamlit UI with topic suggestion bubbles
+- [x] Gemini 2.5 Flash-Lite as primary LLM with Groq fallback
+- [x] Foreign language mode (English / Spanish ENEM questions)
+- [x] Deployed on Streamlit Cloud
 
-### 🧠 Memória Persistente
-- [ ] Histórico de sessões salvo no Supabase
-- [ ] Mapa de pontos fracos acumulado ao longo do tempo
-- [ ] Temas pesquisados e dificuldades registradas permanentemente
-
-### 📊 Painel de Evolução
-- [ ] Dashboard com evolução semanal e mensal
-- [ ] Gráfico de desempenho por área do conhecimento
-- [ ] Indicador de temas dominados vs. a revisar
-
-### 🤖 Plano de Estudos Adaptativo
-- [ ] Agente planejador que cria cronograma personalizado
-- [ ] Alertas proativos para temas negligenciados
-- [ ] Sugestões baseadas no calendário do ENEM
-
-### 📱 Melhorias de UX
-- [ ] PWA (Progressive Web App) — funciona como app no celular
-- [ ] Modo offline para material já gerado
-- [ ] Exportar material em PDF
-
-### 🔗 Integrações
-- [ ] Integração com questões reais do ENEM (banco de dados oficial)
-- [ ] Compartilhamento de material entre estudantes
-- [ ] API pública para integração com outras plataformas educacionais
+### v2 — Planned (persistent memory + RAG + redação ENEM)
+- [ ] Google login via Supabase Auth
+- [ ] Persistent session history in Supabase
+- [ ] Long-term weak-points map per student
+- [ ] Weekly/monthly performance dashboard
+- [ ] Adaptive study plan generated by a new planner agent
+- [ ] RAG with INEP official PDFs (pgvector + Supabase)
+- [ ] ENEM essay (*redação*) grading agent with competency rubric
+- [ ] PWA support — works as a mobile app
+- [ ] PDF export of generated study materials
 
 ---
 
-## 🤝 Contribuindo
+## Author
 
-Pull requests são bem-vindos! Para mudanças maiores, abra uma issue primeiro para discutir o que você gostaria de mudar.
-
----
-
-## 📄 Licença
-
-MIT License — sinta-se livre para usar, modificar e distribuir.
+**Silas Luiz**
+- GitHub: [@silasluiz96-alt](https://github.com/silasluiz96-alt)
 
 ---
 
 <div align="center">
-  Feito com ☕ e IA generativa para estudantes brasileiros
+  Built with Generative AI for Brazilian high school students preparing for ENEM
 </div>
