@@ -34,11 +34,8 @@ DISCIPLINES = {
     "matematica":        "Matemática e suas Tecnologias",
 }
 
-# Slugs de disciplina de língua estrangeira na API enem.dev
-_DISCIPLINE_SLUGS_IDIOMA = {
-    "ingles", "espanhol", "lingua-estrangeira",
-    "ingles-ingles", "espanhol-espanhol", "foreign-language",
-}
+# Valores do campo "language" na API enem.dev que indicam idioma estrangeiro
+_LANGUAGE_SLUGS_ESTRANGEIRO = {"ingles", "espanhol", "english", "spanish"}
 
 # Palavras-gatilho para detecção de inglês (3+ ocorrências → inglês)
 _PALAVRAS_INGLES = {
@@ -83,15 +80,14 @@ def _detectar_idioma_estrangeiro(questao: dict) -> bool:
     """
     Retorna True se a questão é de língua estrangeira (inglês ou espanhol).
 
-    Critérios (qualquer um suficiente):
-    1. discipline_slug contém slug de idioma estrangeiro
-    2. Texto contém ¿ ou ¡ → espanhol
-    3. 3+ palavras-gatilho de inglês no texto de apoio → inglês
-    4. 3+ palavras-gatilho de espanhol no texto de apoio → espanhol
+    Critérios em ordem de confiança:
+    1. Campo "idioma" preenchido pela API (fonte de verdade)
+    2. ¿ ou ¡ no texto → espanhol
+    3. Fallback: palavras-gatilho de inglês ou espanhol (3+ hits)
     """
-    # Critério 1: slug da disciplina
-    disc = (questao.get("disciplina_slug", "") or "").lower().replace(" ", "-")
-    if any(slug in disc for slug in _DISCIPLINE_SLUGS_IDIOMA):
+    # Critério 1: campo "language" da API — mais confiável
+    idioma = (questao.get("idioma", "") or "").lower().strip()
+    if idioma in _LANGUAGE_SLUGS_ESTRANGEIRO:
         return True
 
     contexto = (questao.get("contexto", "") or "").lower()
@@ -101,12 +97,10 @@ def _detectar_idioma_estrangeiro(questao: dict) -> bool:
     if "¿" in texto_completo or "¡" in texto_completo:
         return True
 
-    # Critério 3: palavras-gatilho de inglês (3+ hits)
+    # Critério 3: fallback por palavras-gatilho (3+ hits)
     palavras = set(re.sub(r"[^\w\s]", "", contexto).split())
     if sum(1 for p in _PALAVRAS_INGLES if p in palavras) >= 3:
         return True
-
-    # Critério 4: palavras-gatilho de espanhol (3+ hits)
     if sum(1 for p in _PALAVRAS_ESPANHOL if p in palavras) >= 3:
         return True
 
@@ -503,9 +497,9 @@ def search_language_questions(language: str, limit: int = 10) -> list[dict]:
     language: "ingles" ou "espanhol"
 
     Fluxo:
-    1. Coleta questões brutas via _buscar_paginas
-    2. Filtra APENAS as detectadas como idioma estrangeiro por _detectar_idioma_estrangeiro
-    3. Aplica filtro de idioma específico (¿/¡ para espanhol, ausência deles para inglês)
+    1. GET primeira página de cada ano (limit=45, offset=0)
+    2. Filtra pelo campo "language" da API (fonte de verdade)
+    3. Para ao acumular 6 questões — evita páginas extras
     4. Classifica pela heurística e retorna até limit questões
     """
     exames = get_exams()
@@ -517,18 +511,7 @@ def search_language_questions(language: str, limit: int = 10) -> list[dict]:
     anos = sorted([e["ano"] for e in exames if e["ano"] in _ANOS_PERMITIDOS], reverse=True)
     log.info(f"search_language_questions('{language}') | anos: {anos}")
 
-    _META = 6  # para ao encontrar este número de questões do idioma correto
-
-    def _eh_idioma_certo(q: dict) -> bool:
-        txt = " ".join([q.get("contexto", "") or "", q.get("enunciado", "") or ""])
-        if language == "espanhol":
-            palavras = set(re.sub(r"[^\w\s]", "", txt.lower()).split())
-            return ("¿" in txt or "¡" in txt or
-                    sum(1 for p in _PALAVRAS_ESPANHOL if p in palavras) >= 3)
-        # ingles: sem marcadores espanhóis + hits de inglês
-        palavras = set(re.sub(r"[^\w\s]", "", txt.lower()).split())
-        return ("¿" not in txt and "¡" not in txt and
-                sum(1 for p in _PALAVRAS_INGLES if p in palavras) >= 3)
+    _META = 6
 
     idioma_questoes: list[dict] = []
 
@@ -536,13 +519,14 @@ def search_language_questions(language: str, limit: int = 10) -> list[dict]:
         if len(idioma_questoes) >= _META:
             break
         try:
-            # Apenas primeira página (limit=45, offset=0) — sem _buscar_paginas
             dados = _get(f"/exams/{ano}/questions", params={"limit": 45, "offset": 0})
             if not dados:
                 continue
             for q in dados.get("questions", []):
-                qf = _formatar_questao(q, ano=ano)
-                if _detectar_idioma_estrangeiro(qf) and _eh_idioma_certo(qf):
+                # Usa o campo "language" da API como fonte primária de verdade
+                lang_api = (q.get("language") or "").lower().strip()
+                if lang_api == language:
+                    qf = _formatar_questao(q, ano=ano)
                     idioma_questoes.append(qf)
                     if len(idioma_questoes) >= _META:
                         break
