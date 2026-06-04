@@ -226,8 +226,15 @@ knowsynth/
 
 ## Author
 
-**Silas Luiz**
-- GitHub: [@silasluiz96-alt](https://github.com/silasluiz96-alt)
+**Silas Luiz Bom Fim** — Data Engineer · ML & AI Developer · Python | PL/SQL | LLM | UFABC
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-silas--bom--fim-blue?logo=linkedin)](https://www.linkedin.com/in/silas-bom-fim)
+[![GitHub](https://img.shields.io/badge/GitHub-silasluiz96--alt-black?logo=github)](https://github.com/silasluiz96-alt)
+[![MDPI](https://img.shields.io/badge/MDPI_Logistics-2025-orange?logo=academia)](https://doi.org/10.3390/logistics9030109)
+
+📄 **Published researcher** — *Machine Failure Prediction using ML for Predictive Maintenance*,
+Logistics, Vol. 9, Issue 3, Art. 109 · MDPI · 2025 · Open Access
+→ [doi.org/10.3390/logistics9030109](https://doi.org/10.3390/logistics9030109)
 
 ---
 
