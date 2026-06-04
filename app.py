@@ -1026,7 +1026,7 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
             from agents.complexity_ranker import classificar_top3
 
             if _modo_idioma_pipeline:
-                questoes_reais = search_language_questions(_modo_idioma_pipeline, limit=15)
+                questoes_reais = search_language_questions(_modo_idioma_pipeline)
             else:
                 questoes_reais = search_questions_by_topic(tema, limit=15)
             if questoes_reais:
