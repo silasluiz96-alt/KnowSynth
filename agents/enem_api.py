@@ -490,17 +490,14 @@ def get_questions_by_difficulty(topic: str, discipline: str = None) -> dict:
     }
 
 
-def search_language_questions(language: str, limit: int = 10) -> list[dict]:
+def search_language_questions(language: str) -> list[dict]:
     """
-    Busca questões de língua estrangeira dos anos 2022-2023.
+    Busca até 6 questões de língua estrangeira dos anos 2022-2023.
 
     language: "ingles" ou "espanhol"
 
-    Fluxo:
-    1. GET primeira página de cada ano (limit=45, offset=0)
-    2. Filtra pelo campo "language" da API (fonte de verdade)
-    3. Para ao acumular 6 questões — evita páginas extras
-    4. Classifica pela heurística e retorna até limit questões
+    Retorna as questões brutas (sem classificar) para que o chamador
+    passe por classificar_top3(), igual ao fluxo de search_questions_by_topic.
     """
     exames = get_exams()
     if not exames:
@@ -511,43 +508,26 @@ def search_language_questions(language: str, limit: int = 10) -> list[dict]:
     anos = sorted([e["ano"] for e in exames if e["ano"] in _ANOS_PERMITIDOS], reverse=True)
     log.info(f"search_language_questions('{language}') | anos: {anos}")
 
-    _META = 6
-
-    idioma_questoes: list[dict] = []
+    questoes: list[dict] = []
 
     for ano in anos:
-        if len(idioma_questoes) >= _META:
+        if len(questoes) >= 6:
             break
         try:
             dados = _get(f"/exams/{ano}/questions", params={"limit": 45, "offset": 0})
             if not dados:
                 continue
             for q in dados.get("questions", []):
-                # Usa o campo "language" da API como fonte primária de verdade
-                lang_api = (q.get("language") or "").lower().strip()
-                if lang_api == language:
-                    qf = _formatar_questao(q, ano=ano)
-                    idioma_questoes.append(qf)
-                    if len(idioma_questoes) >= _META:
+                if (q.get("language") or "").lower().strip() == language:
+                    questoes.append(_formatar_questao(q, ano=ano))
+                    if len(questoes) >= 6:
                         break
-            log.info(f"  ano={ano} → {len(idioma_questoes)} questões de {language} acumuladas")
+            log.info(f"  ano={ano} → {len(questoes)} questões de {language} acumuladas")
         except Exception as e:
             log.warning(f"  Erro ao buscar ano {ano}: {e}")
 
-    log.info(f"  Total final: {len(idioma_questoes)} questões de {language}")
-
-    if not idioma_questoes:
-        log.warning(f"Nenhuma questão de {language} encontrada nos anos {anos}.")
-        return []
-
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-        from agents.complexity_ranker import classificar_lote
-        classificadas = classificar_lote(idioma_questoes)
-    except Exception:
-        classificadas = idioma_questoes
-
-    return classificadas[:limit]
+    log.info(f"  Total: {len(questoes)} questões de {language}")
+    return questoes
 
 
 # ── Teste local ───────────────────────────────────────────────────────────────
