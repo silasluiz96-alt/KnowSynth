@@ -42,16 +42,19 @@ DISCIPLINES = {
 # Valores do campo "language" na API enem.dev que indicam idioma estrangeiro
 _LANGUAGE_SLUGS_ESTRANGEIRO = {"ingles", "espanhol", "english", "spanish"}
 
-# FIX 2 — Palavras-gatilho para detecção de inglês
-# Threshold baixado para 2+ (antes era 3) e vocabulário expandido.
-# Questões de inglês no ENEM costumam ter textos curtos — 3 hits era restritivo demais.
-_PALAVRAS_INGLES = {
-    "the", "is", "are", "was", "were", "have", "has", "that", "this",
-    "with", "from", "they", "their", "would", "could", "should",
-    "which", "when", "what", "where", "been", "will", "than", "then",
-    "about", "into", "after", "some", "more", "also", "text", "read",
-    "not", "but", "for", "its", "him", "her", "can", "all", "one",
-}
+# ── Detecção SVO de inglês ────────────────────────────────────────────────────
+# Detecta sentenças completas em inglês via padrão SVO (Sujeito + Verbo).
+# Pronomes pessoais ingleses (I, you, he, she, it, we, they) não existem como
+# sujeito gramatical em português — o padrão dispara apenas para inglês real.
+# Exige sentença completa para não confundir palavras inglesas isoladas em
+# questões normais (ex: nome de obra, citação, título de autor estrangeiro).
+_RE_SVO_INGLES = re.compile(
+    r'\b(I|you|he|she|it|we|they|[Tt]he\s+\w+|[Aa]\s+\w+)\s+'
+    r'(is|are|was|were|has|have|had|can|will|would|could|should'
+    r'|does|did|do|said|told|went|came|got|made|took|became|seems|appears'
+    r'|knows?|thinks?|wants?|needs?|likes?|feels?|shows?|gives?|helps?)\b'
+)
+
 
 # Palavras-gatilho para detecção de espanhol (3+ ocorrências → espanhol)
 _PALAVRAS_ESPANHOL = {
@@ -121,26 +124,32 @@ def _detectar_idioma_estrangeiro(questao: dict) -> bool:
     Retorna True se a questão é de língua estrangeira (inglês ou espanhol).
 
     Critérios em ordem de confiança:
-    1. Campo "idioma" preenchido pela API (fonte de verdade)
+    1. Campo "idioma" da API (fonte de verdade para espanhol)
     2. ¿ ou ¡ no texto → espanhol
-    3. Fallback: palavras-gatilho de inglês ou espanhol (3+ hits)
+    3. Regex SVO inglês — detecta sentença completa Sujeito+Verbo em inglês.
+       Pronomes pessoais ingleses não existem como sujeito em português,
+       portanto um hit já é sinal forte o suficiente.
+    4. Fallback keyword espanhol (3+ hits)
     """
-    # Critério 1: campo "language" da API — mais confiável
+    # Critério 1: campo "language" da API
     idioma = (questao.get("idioma", "") or "").lower().strip()
     if idioma in _LANGUAGE_SLUGS_ESTRANGEIRO:
         return True
 
-    contexto = (questao.get("contexto", "") or "").lower()
-    texto_completo = contexto + " " + (questao.get("enunciado", "") or "").lower()
+    contexto  = (questao.get("contexto",  "") or "")
+    enunciado = (questao.get("enunciado", "") or "")
+    texto_completo = f"{contexto} {enunciado}"
 
     # Critério 2: caracteres exclusivos do espanhol
     if "¿" in texto_completo or "¡" in texto_completo:
         return True
 
-    # Critério 3: fallback por palavras-gatilho (3+ hits)
-    palavras = set(re.sub(r"[^\w\s]", "", contexto).split())
-    if sum(1 for p in _PALAVRAS_INGLES if p in palavras) >= 3:
+    # Critério 3: SVO inglês — sentença completa (Sujeito + Verbo)
+    if _RE_SVO_INGLES.search(texto_completo):
         return True
+
+    # Critério 4: fallback keyword espanhol (3+ hits)
+    palavras = set(re.sub(r"[^\w\s]", "", texto_completo.lower()).split())
     if sum(1 for p in _PALAVRAS_ESPANHOL if p in palavras) >= 3:
         return True
 
@@ -524,15 +533,18 @@ def search_language_questions(language: str) -> list[dict]:
                     continue
 
             elif language == "ingles":
-                # A API nunca marca language='ingles' — detecta por heurística
+                # A API nunca marca language='ingles' — detecta por estrutura SVO.
+                # Pronomes pessoais ingleses (I/you/he/she/it/we/they) não existem
+                # como sujeito em português — 1 hit de SVO já é sinal confiável.
                 if lang_api:
                     continue  # tem idioma marcado → é espanhol, pular
                 if q.get("discipline") != "linguagens":
                     continue  # inglês sempre fica em linguagens
-                contexto = (q.get("context") or "").lower()
-                palavras = set(re.sub(r"[^\w\s]", "", contexto).split())
-                if sum(1 for p in _PALAVRAS_INGLES if p in palavras) < 2:
-                    continue  # não parece inglês (threshold 2 — FIX 2)
+                contexto  = q.get("context")  or ""
+                enunciado = q.get("alternativesIntroduction") or ""
+                texto_q   = f"{contexto} {enunciado}"
+                if not _RE_SVO_INGLES.search(texto_q):
+                    continue  # nenhuma sentença SVO inglesa detectada
 
             questoes.append(_formatar_questao(q, ano=ano))
             if len(questoes) >= 6:
