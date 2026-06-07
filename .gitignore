@@ -17,3 +17,10 @@ __pycache__/
 # IDEs
 .vscode/
 .idea/
+
+# DuckDB — banco de dados local, não vai pro repositório
+*.duckdb
+*.duckdb.wal
+
+# Scripts auxiliares gerados em sessões anteriores
+fix_author.sh

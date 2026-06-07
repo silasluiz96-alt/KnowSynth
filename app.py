@@ -415,6 +415,9 @@ def _init_state():
         "meta_atingida":    False,
         "pausa_ativa":      False,
         "pausa_inicio":     None,
+        # Analytics — DuckDB
+        "llm_por_agente":   {},   # acumulado durante o pipeline: {"Crítico": "gemini-...", ...}
+        "sessao_gravada":   False,  # garante que save_session() só roda uma vez por sessão
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -567,6 +570,29 @@ if st.session_state["sessao_encerrada"]:
 
     with st.spinner("Gerando análise personalizada com IA..."):
         relatorio = edu.relatorio_sessao()
+
+    # ── Persiste a sessão no DuckDB (executa apenas uma vez por encerramento) ──
+    if not st.session_state.get("sessao_gravada"):
+        try:
+            import sys as _sys, os as _os
+            _hooks_dir = _os.path.join(_os.path.dirname(__file__), ".claude", "hooks")
+            if _hooks_dir not in _sys.path:
+                _sys.path.insert(0, _hooks_dir)
+            from hooks import get_session_log as _get_log
+            from utils.analytics_db import save_session as _save_session
+
+            _save_session(
+                usuario=nome,
+                ts_inicio=st.session_state.get("sessao_inicio", time.time()),
+                ts_fim=time.time(),
+                meta_tempo=st.session_state.get("meta_tempo", "Sem limite"),
+                total_temas=len(snap.get("temas_estudados", [])),
+                agent_log=_get_log(formatted=False),
+                llm_por_agente=st.session_state.get("llm_por_agente", {}),
+            )
+            st.session_state["sessao_gravada"] = True
+        except Exception:
+            pass  # falha silenciosa — analytics nunca deve quebrar o app principal
 
     st.markdown(f'<div class="glass-card glass-card-green">{relatorio.get("resumo_sessao","")}</div>', unsafe_allow_html=True)
 
@@ -1023,6 +1049,8 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
             post_agent_hook("Crítico", _t, success=False)
             raise RuntimeError(r_critica["erro"])
         post_agent_hook("Crítico", _t, success=True)
+        if r_critica.get("modelo_usado"):
+            st.session_state["llm_por_agente"]["Crítico"] = r_critica["modelo_usado"]
 
         _show("📝 Sintetizador", "Preparando seu material personalizado com carinho...", 2)
         time.sleep(3)  # respeita limite 20 req/min
@@ -1032,6 +1060,8 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
             post_agent_hook("Sintetizador", _t, success=False)
             raise RuntimeError(r_sintese["erro"])
         post_agent_hook("Sintetizador", _t, success=True)
+        if r_sintese.get("modelo_usado"):
+            st.session_state["llm_por_agente"]["Sintetizador"] = r_sintese["modelo_usado"]
 
         edu._analista.register_search(tema)
 
@@ -1095,11 +1125,12 @@ if st.session_state["resultado_atual"]:
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f'<h2 style="color:var(--cyan)">📖 {sintese.get("tema","").upper()}</h2>', unsafe_allow_html=True)
 
-    aba1, aba2, aba3, aba4 = st.tabs([
+    aba1, aba2, aba3, aba4, aba5 = st.tabs([
         "📚 Material de Estudo",
         "🔍 Fontes Pesquisadas",
         "🧠 Análise Crítica",
         "📊 Minha Sessão",
+        "📈 Analytics",
     ])
 
     # ── Aba 1: Material ───────────────────────────────────────────────────────
@@ -1542,6 +1573,82 @@ if st.session_state["resultado_atual"]:
 
         if st.button("🖥️ Ver Log do Pipeline", use_container_width=True):
             st.markdown(f'<div class="log-box">{edu.log_sessao()}</div>', unsafe_allow_html=True)
+
+    # ── Aba 5: Analytics histórico (DuckDB) ──────────────────────────────────
+    with aba5:
+        st.markdown('<h3 style="color:var(--cyan)">📈 Analytics de Sessões</h3>', unsafe_allow_html=True)
+        st.markdown('<p style="color:var(--text3);font-size:.82rem">Dados acumulados de todas as sessões encerradas neste dispositivo.</p>', unsafe_allow_html=True)
+
+        try:
+            from utils.analytics_db import count_sessions, load_sessions_summary, load_agent_stats
+
+            total = count_sessions()
+
+            if total == 0:
+                st.markdown("""
+                <div class="glass-card glass-card-purple" style="text-align:center;padding:2rem">
+                  <div style="font-size:2rem">📊</div>
+                  <p style="color:var(--text3)">Nenhuma sessão gravada ainda.</p>
+                  <p style="color:#444;font-size:.8rem">Encerre uma sessão de estudo para começar a ver seus dados aqui.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # ── Métricas gerais ───────────────────────────────────────────
+                sessions = load_sessions_summary()
+                agent_stats = load_agent_stats()
+
+                duracao_media = sum(s["duracao_min"] for s in sessions) / len(sessions) if sessions else 0
+                temas_total   = sum(s["total_temas"]  for s in sessions)
+
+                col_a1, col_a2, col_a3 = st.columns(3)
+                with col_a1:
+                    st.markdown(f'<div class="glass-card glass-card-cyan" style="text-align:center"><div style="font-size:1.8rem;color:var(--cyan)">{total}</div><div style="color:var(--text3);font-size:.8rem">Sessões gravadas</div></div>', unsafe_allow_html=True)
+                with col_a2:
+                    st.markdown(f'<div class="glass-card glass-card-green" style="text-align:center"><div style="font-size:1.8rem;color:var(--green)">{temas_total}</div><div style="color:var(--text3);font-size:.8rem">Temas estudados (total)</div></div>', unsafe_allow_html=True)
+                with col_a3:
+                    st.markdown(f'<div class="glass-card glass-card-purple" style="text-align:center"><div style="font-size:1.8rem;color:var(--purple)">{duracao_media:.0f} min</div><div style="color:var(--text3);font-size:.8rem">Duração média por sessão</div></div>', unsafe_allow_html=True)
+
+                st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+
+                # ── Performance por agente ────────────────────────────────────
+                if agent_stats:
+                    st.markdown('<h4 style="color:var(--green)">⚡ Performance dos Agentes</h4>', unsafe_allow_html=True)
+                    st.markdown('<p style="color:var(--text3);font-size:.78rem">Ordenado do mais lento ao mais rápido</p>', unsafe_allow_html=True)
+
+                    for ag in agent_stats:
+                        total_llm = (ag["chamadas_groq"] or 0) + (ag["chamadas_gemini"] or 0)
+                        pct_groq  = round(ag["chamadas_groq"] / total_llm * 100) if total_llm else 0
+                        fallback_txt = f' · {pct_groq}% fallback Groq' if total_llm else ''
+                        erros_txt    = f' · ⚠️ {ag["total_erros"]} erro(s)' if ag["total_erros"] else ''
+
+                        st.markdown(
+                            f'<div class="glass-card" style="padding:.6rem 1rem">'
+                            f'<b style="color:var(--cyan)">{ag["agente"]}</b>'
+                            f'<span style="color:var(--text3);font-size:.78rem"> — '
+                            f'média: <span style="color:var(--text)">{ag["duracao_media_s"]}s</span> · '
+                            f'max: {ag["duracao_max_s"]}s{fallback_txt}{erros_txt}'
+                            f'</span></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+
+                # ── Histórico de sessões ──────────────────────────────────────
+                st.markdown('<h4 style="color:var(--cyan)">🗓️ Últimas Sessões</h4>', unsafe_allow_html=True)
+                for s in sessions[:10]:
+                    ts = s["ts_inicio"]
+                    data_txt = ts.strftime("%d/%m/%Y %H:%M") if hasattr(ts, "strftime") else str(ts)[:16]
+                    st.markdown(
+                        f'<div class="glass-card" style="padding:.5rem 1rem;font-size:.82rem">'
+                        f'<b style="color:var(--text)">{s["usuario"]}</b> · {data_txt} · '
+                        f'<span style="color:var(--cyan)">{s["total_temas"]} tema(s)</span> · '
+                        f'<span style="color:var(--text3)">{s["duracao_min"]:.0f} min · {s["meta_tempo"]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+        except Exception as _e_analytics:
+            st.info(f"Analytics indisponível neste momento: {_e_analytics}")
 
 # ── Tela inicial (sem resultado e sem carregamento) ───────────────────────────
 elif not st.session_state.get("carregando") and not iniciar:

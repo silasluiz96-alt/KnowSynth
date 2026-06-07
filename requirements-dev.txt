@@ -1,0 +1,12 @@
+# Dependências de desenvolvimento — não necessárias para rodar o app Streamlit.
+# Usadas para transformações dbt e análise local dos dados de sessão.
+#
+# Requer Python 3.12 (recomendado). Instale em ambiente virtual separado:
+#   python3.12 -m venv .venv-dev
+#   .venv-dev\Scripts\activate
+#   pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+dbt-core
+dbt-duckdb

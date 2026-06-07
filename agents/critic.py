@@ -140,6 +140,7 @@ def analisar(resultado_pesquisa: dict) -> dict:
         "nivel_prioridade": analise.get("nivel_prioridade", ""),
         "justificativa_prioridade": analise.get("justificativa_prioridade", ""),
         "tokens_usados": tokens,
+        "modelo_usado": r["modelo_usado"],
         "skill_utilizada": str(SKILL_PATH),
         "erro": None,
     }
@@ -157,6 +158,7 @@ def _resultado_erro(tema: str, mensagem: str) -> dict:
         "nivel_prioridade": "",
         "justificativa_prioridade": "",
         "tokens_usados": 0,
+        "modelo_usado": "",
         "erro": mensagem,
         "skill_utilizada": str(SKILL_PATH),
     }
