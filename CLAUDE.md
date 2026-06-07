@@ -180,6 +180,30 @@ python -m streamlit run app.py
 
 ---
 
+## 📌 Padrões de Commit
+
+### Convenção de mensagens
+- **v1 (encerrado):** `fix:`, `feat:`, `docs:`, `AoM:` — sem prefixo de versão
+- **v2 (atual):** todos os commits começam com `v2:` seguido do tipo
+
+```
+v2: feat: <descrição>     — nova funcionalidade
+v2: fix: <descrição>      — correção de bug
+v2: docs: <descrição>     — documentação
+v2: refactor: <descrição> — refatoração sem mudança de comportamento
+v2: chore: <descrição>    — tarefas de infraestrutura (deps, config)
+```
+
+**Exemplos:**
+```
+v2: feat: adiciona ingestão de sessões no Supabase
+v2: fix: corrige mapeamento de tabela respostas
+v2: docs: atualiza schema.yml com documentação dos models
+v2: chore: adiciona supabase-py ao requirements.txt
+```
+
+---
+
 ## 📌 Padrões de Código
 
 - Todos os agentes retornam dicionários — nunca levantam exceções para o pipeline
