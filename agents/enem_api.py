@@ -399,6 +399,11 @@ def search_questions_by_topic(topic: str, limit: int = 10) -> list[dict]:
                 ]).lower()
                 if keywords and not any(kw in texto for kw in keywords):
                     continue
+                # Descarta questões cujas alternativas são imagens (texto vazio)
+                # — o app não consegue exibir alternativas sem texto
+                alts = qf.get("alternativas", {})
+                if not any(v.strip() for v in alts.values()):
+                    continue
                 encontradas.append(qf)
                 if len(encontradas) >= _META:
                     break
