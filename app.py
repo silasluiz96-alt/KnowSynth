@@ -1583,7 +1583,7 @@ if st.session_state["resultado_atual"]:
         try:
             from utils.analytics_db import count_sessions, load_sessions_summary, load_agent_stats
 
-            total = count_sessions()
+            total = count_sessions(usuario=nome)
 
             if total == 0:
                 st.markdown("""
@@ -1595,8 +1595,8 @@ if st.session_state["resultado_atual"]:
                 """, unsafe_allow_html=True)
             else:
                 # ── Métricas gerais ───────────────────────────────────────────
-                sessions = load_sessions_summary()
-                agent_stats = load_agent_stats()
+                sessions = load_sessions_summary(usuario=nome)
+                agent_stats = load_agent_stats(usuario=nome)
 
                 duracao_media = sum(s["duracao_min"] for s in sessions) / len(sessions) if sessions else 0
                 temas_total   = sum(s["total_temas"]  for s in sessions)

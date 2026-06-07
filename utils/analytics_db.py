@@ -122,58 +122,100 @@ def save_session(
     return session_id
 
 
-def load_sessions_summary() -> list[dict]:
+def load_sessions_summary(usuario: str | None = None) -> list[dict]:
     """
-    Retorna um resumo de todas as sessões gravadas.
+    Retorna um resumo das sessões gravadas.
+
+    Parâmetros:
+        usuario: se informado, retorna apenas sessões deste usuário.
+                 se None, retorna todas (uso administrativo).
+
     Usado pela aba Analytics do Streamlit.
     """
     init_db()
     with _conectar() as con:
-        rows = con.execute("""
-            SELECT
-                s.session_id,
-                s.usuario,
-                s.ts_inicio,
-                s.ts_fim,
-                s.meta_tempo,
-                s.total_temas,
-                s.duracao_min
-            FROM raw_sessions s
-            ORDER BY s.ts_inicio DESC
-        """).fetchall()
+        if usuario:
+            rows = con.execute("""
+                SELECT
+                    session_id, usuario, ts_inicio, ts_fim,
+                    meta_tempo, total_temas, duracao_min
+                FROM raw_sessions
+                WHERE usuario = ?
+                ORDER BY ts_inicio DESC
+            """, [usuario]).fetchall()
+        else:
+            rows = con.execute("""
+                SELECT
+                    session_id, usuario, ts_inicio, ts_fim,
+                    meta_tempo, total_temas, duracao_min
+                FROM raw_sessions
+                ORDER BY ts_inicio DESC
+            """).fetchall()
 
-        cols = ["session_id", "usuario", "ts_inicio", "ts_fim", "meta_tempo", "total_temas", "duracao_min"]
+        cols = ["session_id", "usuario", "ts_inicio", "ts_fim",
+                "meta_tempo", "total_temas", "duracao_min"]
         return [dict(zip(cols, row)) for row in rows]
 
 
-def load_agent_stats() -> list[dict]:
+def load_agent_stats(usuario: str | None = None) -> list[dict]:
     """
     Retorna estatísticas agregadas por agente — tempo médio e taxa de fallback Groq.
+
+    Parâmetros:
+        usuario: se informado, considera apenas sessões deste usuário.
+                 se None, agrega todas as sessões.
+
     Usado pela aba Analytics do Streamlit.
     """
     init_db()
     with _conectar() as con:
-        rows = con.execute("""
-            SELECT
-                agente,
-                COUNT(*)                                              AS total_chamadas,
-                ROUND(AVG(duracao_s), 2)                             AS duracao_media_s,
-                ROUND(MAX(duracao_s), 2)                             AS duracao_max_s,
-                SUM(CASE WHEN sucesso = false THEN 1 ELSE 0 END)     AS total_erros,
-                SUM(CASE WHEN llm_usado ILIKE '%llama%' THEN 1 ELSE 0 END) AS chamadas_groq,
-                SUM(CASE WHEN llm_usado ILIKE '%gemini%' THEN 1 ELSE 0 END) AS chamadas_gemini
-            FROM raw_agent_calls
-            GROUP BY agente
-            ORDER BY duracao_media_s DESC
-        """).fetchall()
+        if usuario:
+            rows = con.execute("""
+                SELECT
+                    ac.agente,
+                    COUNT(*)                                                   AS total_chamadas,
+                    ROUND(AVG(ac.duracao_s), 2)                               AS duracao_media_s,
+                    ROUND(MAX(ac.duracao_s), 2)                               AS duracao_max_s,
+                    SUM(CASE WHEN ac.sucesso = false THEN 1 ELSE 0 END)       AS total_erros,
+                    SUM(CASE WHEN ac.llm_usado ILIKE '%llama%' THEN 1 ELSE 0 END)  AS chamadas_groq,
+                    SUM(CASE WHEN ac.llm_usado ILIKE '%gemini%' THEN 1 ELSE 0 END) AS chamadas_gemini
+                FROM raw_agent_calls ac
+                INNER JOIN raw_sessions s ON s.session_id = ac.session_id
+                WHERE s.usuario = ?
+                GROUP BY ac.agente
+                ORDER BY duracao_media_s DESC
+            """, [usuario]).fetchall()
+        else:
+            rows = con.execute("""
+                SELECT
+                    agente,
+                    COUNT(*)                                                   AS total_chamadas,
+                    ROUND(AVG(duracao_s), 2)                                  AS duracao_media_s,
+                    ROUND(MAX(duracao_s), 2)                                  AS duracao_max_s,
+                    SUM(CASE WHEN sucesso = false THEN 1 ELSE 0 END)          AS total_erros,
+                    SUM(CASE WHEN llm_usado ILIKE '%llama%' THEN 1 ELSE 0 END)  AS chamadas_groq,
+                    SUM(CASE WHEN llm_usado ILIKE '%gemini%' THEN 1 ELSE 0 END) AS chamadas_gemini
+                FROM raw_agent_calls
+                GROUP BY agente
+                ORDER BY duracao_media_s DESC
+            """).fetchall()
 
         cols = ["agente", "total_chamadas", "duracao_media_s", "duracao_max_s",
                 "total_erros", "chamadas_groq", "chamadas_gemini"]
         return [dict(zip(cols, row)) for row in rows]
 
 
-def count_sessions() -> int:
-    """Retorna o total de sessões gravadas."""
+def count_sessions(usuario: str | None = None) -> int:
+    """
+    Retorna o total de sessões gravadas.
+
+    Parâmetros:
+        usuario: se informado, conta apenas sessões deste usuário.
+    """
     init_db()
     with _conectar() as con:
+        if usuario:
+            return con.execute(
+                "SELECT COUNT(*) FROM raw_sessions WHERE usuario = ?", [usuario]
+            ).fetchone()[0]
         return con.execute("SELECT COUNT(*) FROM raw_sessions").fetchone()[0]
