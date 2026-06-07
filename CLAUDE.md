@@ -408,3 +408,59 @@ Linguagens: Modernismo Brasileiro, Interpretação de Texto, Figuras de Linguage
 - v2 em fase de aprendizado (Supabase via NoCodeStartup + dbt fundamentals)
 - Modelo de dados ainda não mapeado — próxima etapa
 - Nenhum código v2 implementado ainda
+
+---
+
+## V2 — ROADMAP DETALHADO
+
+### Status do v1
+- Imagens ENEM: ✅ corrigido (markdown `![](url)` convertido para `<img>` HTML)
+- JSON Synthesizer: ✅ estabilizado (`_serializar_critica` defensiva + `parse_resposta_json` com fallback regex)
+- Busca ENEM por tema: ✅ corrigido (normalização de acentos, 30+ temas mapeados, retry em 429, anos 2019–2023)
+- Detecção de inglês/espanhol: ✅ corrigido (regex SVO estrutural substitui contagem de palavras)
+- Analytics de sessão: ✅ implementado com DuckDB local (`utils/analytics_db.py` + aba Analytics no app)
+- DuckDB no código: ⚠️ ainda ativo em `app.py` e `utils/analytics_db.py` — descontinuado nos docs mas migração para Supabase ainda não foi feita; remover ao implementar Fase 1
+- Conditional orchestration: 🔜 pendente para v2
+- Subagente língua estrangeira (`language_specialist.py`): 🔜 pendente para v2
+- v1 considerado FECHADO para novas features
+
+### Fase 1 — Infraestrutura de dados
+- Criar projeto no Supabase (free tier)
+- Conectar dbt Cloud ao Supabase
+- Definir e criar tabelas raw no Supabase:
+  - `sessoes` (id, aluno_nome, inicio, fim, tema, disciplina)
+  - `respostas` (id, sessao_id, questao_id, alternativa_escolhida, acertou, dicas_usadas, tempo_resposta)
+  - `questoes_cache` (id, questao_id, tema, disciplina, dificuldade, tem_imagem)
+- Python do app (supabase-py) inserindo dados ao final de cada sessão
+- Remover `utils/analytics_db.py` e referências ao DuckDB no `app.py`
+
+### Fase 2 — Pipeline dbt
+- `sources.yml` apontando para tabelas raw do Supabase
+- `stg_sessoes.sql` — limpeza e padronização
+- `stg_respostas.sql` — limpeza e padronização
+- `fct_desempenho_aluno.sql` — acertos por tema, disciplina, dificuldade
+- `fct_pontos_fracos.sql` — temas com menor taxa de acerto por aluno
+- `dim_questoes.sql` — catálogo de questões com metadados
+- Tests: `not_null` e `unique` em todos os ids
+- Documentação de todos os models no `schema.yml`
+
+### Fase 3 — Features do app
+- Tela de histórico: aluno insere nome e vê sessões anteriores
+- Mapa de pontos fracos: gráfico por tema baseado nos marts dbt
+- Plano adaptativo: Strategist usa histórico para priorizar temas fracos
+
+### Fase 4 — Arquitetura avançada
+- Conditional orchestration: orquestrador decide pipeline por tipo de tema
+- Subagente `language_specialist.py` para inglês/espanhol
+- RAG sobre PDFs do INEP com embeddings
+
+### Stack v2
+- Banco: Supabase PostgreSQL (free tier)
+- Transformação: dbt Cloud (Developer plan, gratuito)
+- Conexão Python: supabase-py
+- Orquestrador: condicional por tipo de tema (v2)
+
+### Dependências entre fases
+- Fase 2 depende da Fase 1 estar completa
+- Fase 3 depende dos marts da Fase 2
+- Fase 4 é independente — pode ser desenvolvida em paralelo
