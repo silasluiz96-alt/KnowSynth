@@ -374,3 +374,37 @@ Linguagens: Modernismo Brasileiro, Interpretação de Texto, Figuras de Linguage
 2. Investigar campo language para questões de inglês (debug já feito para espanhol)
 3. Testar fluxo completo end-to-end no Streamlit Cloud
 4. Continuar roadmap de melhorias
+
+---
+
+## V2 — ROADMAP E DECISÕES TÉCNICAS
+
+### Stack de dados v2
+- Banco: Supabase (PostgreSQL hosted)
+- Transformação: dbt Core (roda localmente, conecta no Supabase)
+- Ingestão: Python (supabase-py ou psycopg2) inserindo dados de sessão no Supabase
+- Consumo: Streamlit lê tabelas marts/ já transformadas pelo dbt
+
+### Arquitetura do fluxo
+1. Aluno usa o app → Python insere respostas brutas no Supabase (tabelas raw)
+2. Desenvolvedor roda `dbt run` localmente → dbt transforma raw em marts
+3. Streamlit lê os marts → exibe mapa de pontos fracos, histórico, desempenho por tema
+
+### Decisões tomadas
+- Supabase escolhido como banco (free tier, PostgreSQL completo, dashboard visual)
+- dbt NÃO roda dentro do Streamlit — é ferramenta de desenvolvimento externa
+- DuckDB DESCONTINUADO (incompatível com Streamlit Cloud)
+- Supabase-py OU psycopg2 para conexão Python → Supabase (a definir)
+- dbt Cloud como opção futura quando o fluxo local estiver dominado
+
+### Features v2 planejadas
+- Persistência de sessões entre acessos
+- Mapa de pontos fracos por tema e disciplina
+- Plano de estudo adaptativo baseado no histórico
+- RAG sobre PDFs do INEP
+- Módulo de redação ENEM
+
+### Status
+- v2 em fase de aprendizado (Supabase via NoCodeStartup + dbt fundamentals)
+- Modelo de dados ainda não mapeado — próxima etapa
+- Nenhum código v2 implementado ainda
