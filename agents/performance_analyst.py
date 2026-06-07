@@ -17,9 +17,9 @@ load_dotenv()
 SKILL_PATH = Path(__file__).parent.parent / ".claude" / "skills" / "performance_analyst.md"
 
 PREVIEW_V2 = (
-    "🚀 Em breve: com o KnowSynth v2, vou lembrar do seu histórico entre sessões, "
-    "identificar seus pontos fracos ao longo do tempo e criar um plano de estudos "
-    "personalizado para você. Acompanhe as atualizações no GitHub."
+    "🔜 Em breve: relatório da sessão por e-mail, modelos dbt para análise histórica "
+    "dos seus dados de estudo e mapa de pontos fracos entre sessões. "
+    "Acompanhe as atualizações no GitHub."
 )
 
 # Regras de classificação de dificuldade conforme a skill

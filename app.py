@@ -612,10 +612,12 @@ if st.session_state["sessao_encerrada"]:
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="glass-card glass-card-purple" style="text-align:center;padding:1.5rem">
-      <b style="color:var(--purple);font-size:1rem">🚀 KnowSynth v2 — Em breve</b><br><br>
-      <span style="color:var(--text3)">Com o KnowSynth v2, seu histórico será salvo entre sessões,
-      {nome}, e você terá um plano de estudos personalizado baseado na sua evolução.<br>
-      Supabase · Memória persistente · Analytics avançado</span>
+      <b style="color:var(--purple);font-size:1rem">🔜 Próximas funcionalidades</b><br><br>
+      <span style="color:var(--text3)">
+        📧 Relatório da sessão por e-mail — receba seus pontos fracos e sugestões direto na caixa de entrada<br><br>
+        📊 Transformações dbt — camada analítica sobre seus dados de sessão com modelos staging e marts<br><br>
+        🗺️ Mapa de pontos fracos — visualize sua evolução entre sessões ao longo do tempo
+      </span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -677,12 +679,11 @@ with st.sidebar:
 
     st.markdown("""
     <div class="preview-v2">
-      <b>🚀 KnowSynth v2 — Em breve</b><br><br>
-      • Histórico entre sessões<br>
-      • Mapa de pontos fracos<br>
-      • Plano adaptativo<br>
-      • Alertas proativos<br>
-      <span style="color:#444;font-size:.72rem">Powered by Supabase</span>
+      <b>🔜 Em breve</b><br><br>
+      • 📧 Relatório por e-mail<br>
+      • 📊 Modelos dbt (staging + marts)<br>
+      • 🗺️ Mapa de pontos fracos<br>
+      • 🤖 Plano adaptativo por IA
     </div>
     """, unsafe_allow_html=True)
 
