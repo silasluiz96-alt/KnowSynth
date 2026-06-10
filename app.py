@@ -1330,6 +1330,16 @@ if st.session_state["resultado_atual"]:
                             st.session_state["letra_escolhida"] = letra
                             st.session_state["tentativas"] += 1
 
+                            # Bufferiza resposta para salvar no Supabase ao encerrar sessão
+                            _qid_buf = f"{str(questao_exibir.get('titulo','sem-titulo'))[:50]}-{questao_exibir.get('ano','ai')}"
+                            st.session_state["respostas_buffer"].append({
+                                "questao_id":             _qid_buf,
+                                "alternativa_escolhida":  letra,
+                                "alternativa_correta":    gabarito_correto_q,
+                                "acertou":                letra == gabarito_correto_q,
+                                "dicas_usadas":           nivel_dica,
+                            })
+
                             if letra == gabarito_correto_q:
                                 st.session_state["resposta_correta"] = True
                                 st.rerun()
