@@ -1073,6 +1073,19 @@ if st.session_state["carregando"] and st.session_state["tema_pendente"]:
                 st.session_state["fila_questoes"] = fila
                 st.session_state["fila_idx"]      = 0
                 st.session_state["questao_atual"] = fila[0] if fila else None
+                # Registra cada questão no catálogo (upsert — seguro chamar múltiplas vezes)
+                for _q in fila:
+                    _qid = f"{str(_q.get('titulo','sem-titulo'))[:50]}-{_q.get('ano','')}"
+                    save_questao_cache(
+                        questao_id  = _qid,
+                        titulo      = _q.get("titulo"),
+                        ano         = _q.get("ano"),
+                        tema        = tema,
+                        disciplina  = _q.get("disciplina"),
+                        dificuldade = _q.get("dificuldade"),
+                        tem_imagem  = bool(_q.get("files")),
+                        is_ai_generated = False,
+                    )
             post_agent_hook("ENEM API + Ranqueador", _t, success=True)
         except Exception as _e_rank:
             post_agent_hook("ENEM API + Ranqueador", _t, success=False)
