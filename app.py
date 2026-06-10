@@ -419,6 +419,8 @@ def _init_state():
         # Supabase
         "respostas_buffer":    [],   # buffer de respostas — salvo em lote ao encerrar sessão
         "supabase_sessao_id":  None, # UUID da sessão no Supabase (preenchido ao encerrar)
+        # Login
+        "acesso_rapido_aberto": False,  # flag: exibe campo de nome no fluxo de acesso rápido
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -492,7 +494,9 @@ if not st.session_state["logged_in"]:
         </div>
         """, unsafe_allow_html=True)
 
-        nome = st.text_input("Qual é o seu nome?", placeholder="Ex: Ana, Carlos, Mariana...", key="input_nome")
+        # ── Fluxo: Login normal ───────────────────────────────────────────────
+        nome  = st.text_input("Nome", placeholder="Ex: Ana, Carlos, Mariana...", key="input_nome")
+        senha = st.text_input("Senha", placeholder="Digite sua senha", type="password", key="input_senha")
 
         meta = st.selectbox(
             "Qual sua meta de estudos hoje?",
@@ -502,15 +506,45 @@ if not st.session_state["logged_in"]:
         )
 
         st.markdown("")
-        if st.button("🚀 Iniciar Sessão", type="primary", use_container_width=True):
+        if st.button("🚀 Entrar", type="primary", use_container_width=True):
             if not nome.strip():
                 st.error("Por favor, insira seu nome para continuar.")
+            elif not senha.strip():
+                st.error("Por favor, insira uma senha para continuar.")
             else:
                 st.session_state["logged_in"]     = True
                 st.session_state["usuario_nome"]  = nome.strip()
                 st.session_state["meta_tempo"]    = meta
                 st.session_state["sessao_inicio"] = time.time()
                 st.rerun()
+
+        # ── Divisor ───────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="display:flex;align-items:center;gap:.8rem;margin:1.2rem 0">
+          <hr style="flex:1;border-color:rgba(255,255,255,.1)">
+          <span style="color:#555;font-size:.8rem">ou</span>
+          <hr style="flex:1;border-color:rgba(255,255,255,.1)">
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Fluxo: Acesso Rápido ──────────────────────────────────────────────
+        if st.button("⚡ Acesso Rápido", use_container_width=True):
+            st.session_state["acesso_rapido_aberto"] = True
+            st.rerun()
+
+        if st.session_state.get("acesso_rapido_aberto"):
+            st.markdown('<p style="color:var(--text3);font-size:.85rem;margin-top:.8rem">Como você quer ser chamado?</p>', unsafe_allow_html=True)
+            nome_rapido = st.text_input("Nome", placeholder="Ex: Ana, Carlos...", key="input_nome_rapido", label_visibility="collapsed")
+            if st.button("▶️ Entrar sem senha", use_container_width=True):
+                if not nome_rapido.strip():
+                    st.error("Insira seu nome para continuar.")
+                else:
+                    st.session_state["logged_in"]            = True
+                    st.session_state["usuario_nome"]         = nome_rapido.strip()
+                    st.session_state["meta_tempo"]           = "Sem limite"
+                    st.session_state["sessao_inicio"]        = time.time()
+                    st.session_state["acesso_rapido_aberto"] = False
+                    st.rerun()
 
     st.stop()
 
