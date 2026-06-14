@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: public
+    schema: public
+    database: postgres
+    tables:
+      - name: sessoes
+      - name: respostas
+      - name: questoes_cache
