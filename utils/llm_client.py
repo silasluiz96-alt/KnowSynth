@@ -2,14 +2,15 @@
 Cliente LLM centralizado do KnowSynth.
 
 Responsabilidades:
-  - Escolher o melhor modelo disponível (Gemini → Groq)
+  - Escolher o melhor modelo disponível (Gemini → Groq → OpenAI)
   - Abstrair diferenças de API entre providers
   - Fazer parse seguro de JSON em respostas de qualquer provider
   - Logar qual modelo foi usado em cada chamada
 
 Providers e modelos:
-  Principal : Google Gemini gemini-2.5-flash  (GEMINI_API_KEY no .env)
-  Fallback  : Groq llama-3.3-70b-versatile    (GROQ_API_KEY  no .env)
+  Principal  : Google Gemini gemini-2.5-flash  (GEMINI_API_KEY no .env)
+  Fallback 1 : Groq llama-3.3-70b-versatile    (GROQ_API_KEY  no .env)
+  Fallback 2 : OpenAI gpt-4o-mini              (OPENAI_API_KEY no .env) — último recurso
 
 Uso básico nos agentes:
     from utils.llm_client import chamar_llm, parse_resposta_json
@@ -35,6 +36,7 @@ log = logging.getLogger(__name__)
 
 _MODELO_GEMINI = "gemini-2.5-flash-lite"
 _MODELO_GROQ   = "llama-3.3-70b-versatile"
+_MODELO_OPENAI = "gpt-4o-mini"
 
 _MSG_INDISPONIVEL = (
     "⏳ Serviço temporariamente indisponível. Tente em alguns minutos."
@@ -158,6 +160,50 @@ def _chamar_groq(prompt: str, system_prompt: str | None, max_tokens: int) -> dic
         return None
 
 
+def _chamar_openai(prompt: str, system_prompt: str | None, max_tokens: int) -> dict | None:
+    """
+    Chama o OpenAI gpt-4o-mini — último recurso quando Gemini e Groq falham.
+    Retorna dict com texto não-vazio, ou None se falhar.
+    """
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        log.debug("OPENAI_API_KEY ausente — pulando OpenAI.")
+        return None
+
+    try:
+        from openai import OpenAI
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        client   = OpenAI(api_key=key)
+        resposta = client.chat.completions.create(
+            model=_MODELO_OPENAI,
+            max_tokens=max_tokens,
+            messages=messages,
+        )
+
+        texto = resposta.choices[0].message.content or ""
+        if not texto.strip():
+            log.warning("OpenAI retornou texto vazio.")
+            return None
+
+        tokens = resposta.usage.total_tokens if resposta.usage else 0
+        log.info("[LLM] %s | tokens=%d", _MODELO_OPENAI, tokens)
+        return {
+            "texto":         texto,
+            "tokens_usados": tokens,
+            "modelo_usado":  _MODELO_OPENAI,
+            "erro":          None,
+        }
+
+    except Exception as exc:
+        log.warning("OpenAI falhou (%s: %s).", type(exc).__name__, exc)
+        return None
+
+
 # ── Interface pública ─────────────────────────────────────────────────────────
 
 def chamar_llm(
@@ -166,7 +212,7 @@ def chamar_llm(
     max_tokens: int = 1500,
 ) -> dict:
     """
-    Chama o melhor LLM disponível: Gemini primeiro, Groq como fallback.
+    Chama o melhor LLM disponível: Gemini primeiro, Groq como fallback, OpenAI como último recurso.
 
     Parâmetros:
         prompt        — mensagem principal do usuário
@@ -187,7 +233,11 @@ def chamar_llm(
     if resultado and resultado.get("texto"):
         return resultado
 
-    log.error("Groq e Gemini falharam — retornando mensagem de indisponibilidade.")
+    resultado = _chamar_openai(prompt, system_prompt, max_tokens)
+    if resultado and resultado.get("texto"):
+        return resultado
+
+    log.error("Gemini, Groq e OpenAI falharam — retornando mensagem de indisponibilidade.")
     return {
         "texto":         "",
         "tokens_usados": 0,
