@@ -124,6 +124,8 @@ KnowSynth is a multi-agent Generative AI system with 6 specialized LLM agents th
 - Free [Groq](https://console.groq.com) account → `GROQ_API_KEY`
 - Free [Tavily](https://tavily.com) account → `TAVILY_API_KEY`
 - Free [Google AI Studio](https://aistudio.google.com) account → `GEMINI_API_KEY`
+- [OpenAI](https://platform.openai.com) account → `OPENAI_API_KEY` *(optional — last-resort LLM fallback)*
+- [Supabase](https://supabase.com) project → `SUPABASE_URL` + `SUPABASE_KEY`
 
 ### Installation
 
@@ -140,6 +142,9 @@ pip install -r requirements.txt
 GEMINI_API_KEY=your_gemini_key_here
 GROQ_API_KEY=your_groq_key_here
 TAVILY_API_KEY=your_tavily_key_here
+OPENAI_API_KEY=your_openai_key_here
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_KEY=your_supabase_key_here
 ```
 
 ### Running Locally
@@ -160,6 +165,9 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
 GEMINI_API_KEY = "your_key"
 GROQ_API_KEY   = "your_key"
 TAVILY_API_KEY = "your_key"
+OPENAI_API_KEY = "your_key"
+SUPABASE_URL   = "your_url"
+SUPABASE_KEY   = "your_key"
 ```
 5. Click **Deploy** — the app will be live in ~2 minutes
 
