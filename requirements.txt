@@ -3,3 +3,5 @@ tavily-python
 streamlit
 python-dotenv
 google-genai
+supabase
+openai
