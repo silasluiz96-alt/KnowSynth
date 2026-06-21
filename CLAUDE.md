@@ -120,16 +120,18 @@ Todas as features da v1 estão funcionando e em produção: https://knowsynth.st
 - ✅ dbt Cloud conectado ao Supabase e ao GitHub
 - ✅ Modelos staging criados e validados (`dbt run` passou)
 - ✅ OpenAI adicionado como fallback final
-- ⏳ **Próxima etapa:** `mart_desempenho` no dbt Cloud
+- ✅ `mart_desempenho` criado e validado (`dbt run` + `dbt test` passaram)
+- ✅ Job agendado no dbt Cloud — `Daily - Run all models` (03:00 UTC / meia-noite BRT)
+- ✅ `SUPABASE_URL` e `SUPABASE_KEY` configurados nos Secrets do Streamlit Cloud
+- ⏳ **Próxima etapa:** Fase 3 — Supabase Auth (login real por `user_id`)
 
 ---
 
 ## Próximos Passos
 
-1. **`mart_desempenho`** — modelo dbt que cruza sessões e respostas para calcular taxa de acerto por aluno, tema e disciplina
-2. **Job agendado no dbt Cloud** — rodar modelos automaticamente todo dia
-3. **`SUPABASE_URL` e `SUPABASE_KEY` nos Secrets do Streamlit Cloud** — necessário para produção
-4. **Fase 3 — Supabase Auth** — login real com e-mail e senha por usuário (separação por `user_id`)
+1. **Fase 3 — Supabase Auth** — login real com e-mail e senha por usuário (separação por `user_id`)
+2. **Mapa de pontos fracos** — rastrear evolução do aluno entre sessões com base no `mart_desempenho`
+3. **Plano de estudo adaptativo** — novo agente Planejador que gera sequência de temas personalizada
 
 ---
 
