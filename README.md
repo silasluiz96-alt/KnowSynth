@@ -231,12 +231,15 @@ knowsynth/
 - [x] Secrets do Supabase configurados no Streamlit Cloud (pronto para produção)
 - [x] Mapa de Pontos Fracos — aba com desempenho consolidado por tema
 - [x] PWA — suporte a "Adicionar à tela inicial" (Android e iOS)
-- [ ] Plano de estudo adaptativo — novo agente Planejador com sequência personalizada de temas
-- [ ] Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema
-- [ ] RAG sobre PDFs do INEP com embeddings
 - [ ] Relatório de sessão entregue por e-mail via SendGrid
-- [ ] Agente de redação com rubrica de competências do INEP
-- [ ] Fase 3 — Supabase Auth (login real com e-mail e senha por `user_id`)
+- [ ] Fase 3 — Supabase Auth (login real com e-mail e senha por `user_id` + LGPD provisória)
+- [~] ~~Plano de estudo adaptativo — novo agente Planejador~~ — aguarda Auth (identificação por `user_id`)
+- [~] ~~Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema~~ — valor marginal no estágio atual; reavaliado na v3
+- [ ] RAG sobre PDFs do INEP com embeddings — mantido no radar para v3, após Auth
+
+> Descontinuados temporariamente: Plano adaptativo e Orquestração condicional dependem de usuários reais identificados (Auth). RAG reclassificado para v3 — complementa o Tavily com fonte primária do INEP.
+>
+> Agente de redação — removido do roadmap atual; escopo separado, avaliado futuramente.
 
 > **Boas práticas de desenvolvimento:** a partir da v2, este projeto segue um
 > [Acordo Formal de Boas Práticas de Desenvolvimento](https://www.linkedin.com/in/silas-bom-fim)
