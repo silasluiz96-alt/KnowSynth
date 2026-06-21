@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: mart_desempenho
+    description: "Desempenho consolidado por aluno, tema e disciplina."
+    columns:
+      - name: aluno_nome
+        description: "Nome do aluno."
+        tests:
+          - not_null
+
+      - name: tema
+        description: "Tema estudado na sessão."
+        tests:
+          - not_null
+
+      - name: disciplina
+        description: "Disciplina do tema (ex: Matemática, Biologia)."
+
+      - name: total_questoes
+        description: "Total de questões respondidas pelo aluno neste tema."
+        tests:
+          - not_null
+
+      - name: total_acertos
+        description: "Total de acertos."
+
+      - name: total_erros
+        description: "Total de erros."
+
+      - name: taxa_acerto_pct
+        description: "Taxa de acerto em percentual (0 a 100)."
+
+      - name: media_dicas
+        description: "Média de dicas usadas por questão."
+
+      - name: total_sessoes
+        description: "Quantidade de sessões distintas neste tema."
+
+      - name: primeira_sessao
+        description: "Timestamp da primeira sessão neste tema."
+
+      - name: ultima_sessao
+        description: "Timestamp da última sessão neste tema."
