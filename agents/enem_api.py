@@ -20,11 +20,6 @@ import unicodedata
 from dotenv import load_dotenv
 import requests
 
-try:
-    from groq import Groq
-except ImportError:
-    Groq = None
-
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="[enem_api] %(message)s")
@@ -523,87 +518,6 @@ def search_questions_by_topic(topic: str, limit: int = 10) -> list[dict]:
 
     log.info(f"  Total: {len(encontradas)} questões para '{topic}'")
     return encontradas
-
-
-def get_questions_by_difficulty(topic: str, discipline: str = None) -> dict:
-    """
-    Busca questões do tema, classifica com Groq e retorna 3 (fácil/médio/difícil).
-    """
-    questoes = search_questions_by_topic(topic, limit=15)
-
-    if discipline and questoes:
-        filtradas = [q for q in questoes if q.get("disciplina_slug") == discipline]
-        questoes  = filtradas if filtradas else questoes
-
-    if len(questoes) < 3:
-        return {
-            "facil": None, "media": None, "dificil": None,
-            "total_analisadas": len(questoes),
-            "erro": f"Apenas {len(questoes)} questão(ões) encontrada(s) para '{topic}'.",
-        }
-
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key or Groq is None:
-        return {
-            "facil": None, "media": None, "dificil": None,
-            "total_analisadas": 0,
-            "erro": "GROQ_API_KEY não encontrada ou biblioteca groq não instalada.",
-        }
-
-    client = Groq(api_key=api_key)
-    classificadas = []
-
-    for q in questoes:
-        enunciado = q.get("contexto") or q.get("enunciado") or ""
-        alts_txt  = "\n".join(f"{l}) {t}" for l, t in q.get("alternativas", {}).items())
-        prompt    = (
-            f"Classifique a dificuldade desta questão do ENEM.\n\n"
-            f"QUESTÃO:\n{enunciado[:1000]}\n\nALTERNATIVAS:\n{alts_txt[:500]}\n\n"
-            f"Critérios: extensão do enunciado, complexidade do vocabulário, "
-            f"número de conceitos, nível de abstração.\n\n"
-            f"Responda APENAS com uma palavra: fácil, média ou difícil"
-        )
-        try:
-            resp  = client.chat.completions.create(
-                model="llama-3.3-70b-versatile", max_tokens=10,
-                messages=[
-                    {"role": "system", "content": "Responda APENAS: fácil, média ou difícil."},
-                    {"role": "user",   "content": prompt},
-                ],
-            )
-            nivel = resp.choices[0].message.content.strip().lower()
-            if nivel not in ("fácil", "média", "difícil"):
-                nivel = "média"
-        except Exception:
-            nivel = "média"
-
-        q2 = dict(q)
-        q2["dificuldade"] = nivel
-        classificadas.append(q2)
-
-    por_nivel = {"fácil": [], "média": [], "difícil": []}
-    for q in classificadas:
-        nivel = q.get("dificuldade", "média")
-        if nivel in por_nivel:
-            por_nivel[nivel].append(q)
-
-    def _pegar(nivel):
-        if por_nivel[nivel]:
-            return por_nivel[nivel][0]
-        for fb in ("média", "fácil", "difícil"):
-            if por_nivel[fb]:
-                q = dict(por_nivel[fb].pop(0))
-                q["dificuldade"] = nivel
-                return q
-        return None
-
-    return {
-        "facil":            _pegar("fácil"),
-        "media":            _pegar("média"),
-        "dificil":          _pegar("difícil"),
-        "total_analisadas": len(classificadas),
-        "erro":             None,
-    }
 
 
 def search_language_questions(language: str) -> list[dict]:
