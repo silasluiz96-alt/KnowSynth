@@ -1,4 +1,4 @@
-﻿import time
+import time
 import os
 import sys
 from collections import defaultdict
@@ -17,8 +17,8 @@ load_dotenv()
 SKILL_PATH = Path(__file__).parent.parent / ".claude" / "skills" / "performance_analyst.md"
 
 PREVIEW_V2 = (
-    "🔜 Em breve: relatório da sessão por e-mail, modelos dbt para análise histórica "
-    "dos seus dados de estudo e mapa de pontos fracos entre sessões. "
+    "🔜 Em breve: plano de estudo adaptativo gerado por IA com base no seu histórico, "
+    "relatório da sessão por e-mail e login individual por usuário. "
     "Acompanhe as atualizações no GitHub."
 )
 
