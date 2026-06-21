@@ -7,41 +7,41 @@
 
 > *Synthesizing knowledge, powering learning.*
 
-KnowSynth is a multi-agent Generative AI system with 6 specialized LLM agents that collaborate in real time to create personalized ENEM study materials.
+KnowSynth é um sistema multi-agente de IA generativa com 7 agentes especializados que colaboram em tempo real para criar materiais de estudo personalizados para o ENEM.
 
 ---
 
-## Architecture
+## Arquitetura
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        User Input                               │
-│              (topic or keyword — e.g. "fordism")                │
+│                       Entrada do Usuário                        │
+│              (tema ou palavra-chave — ex: "fordismo")           │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                       ORCHESTRATOR                              │
-│               orchestrator.py — KnowSynth class                 │
-│         Coordinates the full pipeline with hooks                │
+│                       ORQUESTRADOR                              │
+│               orchestrator.py — classe KnowSynth                │
+│         Coordena o pipeline completo com hooks                  │
 └───┬──────────────┬────────────────────────┬──────────────────┬──┘
     │              │                        │                  │
     ▼              ▼                        ▼                  ▼
 ┌────────┐   ┌──────────┐           ┌────────────┐   ┌──────────────┐
 │  🔍    │   │  📚      │           │  🧠        │   │  📝          │
-│Researcher│ │ ENEM API │           │  Critic    │   │ Synthesizer  │
-│        │   │          │           │            │   │              │
+│Pesqui- │   │ ENEM API │           │  Crítico   │   │ Sintetizador │
+│sador   │   │          │           │            │   │              │
 │Tavily  │   │enem.dev  │           │Gemini /    │   │Gemini /      │
-│3-layer │   │2021–2023 │           │Groq        │   │Groq          │
-│search  │   │real Qs   │           │            │   │              │
+│3 cama- │   │2021–2023 │           │Groq        │   │Groq          │
+│das     │   │questões  │           │            │   │              │
 └───┬────┘   └────┬─────┘           └─────┬──────┘   └──────┬───────┘
     │             │                       │                  │
     │             ▼                       │                  │
     │      ┌────────────┐                 │                  │
     │      │  🏆        │                 │                  │
-    │      │ Complexity │                 │                  │
-    │      │  Ranker    │                 │                  │
-    │      │(heuristic) │                 │                  │
+    │      │ Ranqueador │                 │                  │
+    │      │ Complexid. │                 │                  │
+    │      │(heurística)│                 │                  │
     │      └────┬───────┘                 │                  │
     │           │                         │                  │
     └─────┬─────┘                         │                  │
@@ -50,229 +50,225 @@ KnowSynth is a multi-agent Generative AI system with 6 specialized LLM agents th
           │          │          │
           ▼          ▼          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Streamlit Interface                         │
-│  Material tabs · Question queue (easy→medium→hard) · Timer      │
-│  Progressive hints · Session analytics · Dark/Neon UI           │
+│                     Interface Streamlit                         │
+│  Abas de material · Fila de questões (fácil→médio→difícil)      │
+│  Dicas progressivas · Analytics de sessão · UI Dark/Neon        │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
                ┌───────────────┴───────────────┐
                ▼                               ▼
       ┌──────────────────┐          ┌──────────────────────┐
-      │  💡 Strategist   │          │  📊 Performance      │
-      │                  │          │     Analyst          │
-      │ 3 progressive    │          │                      │
-      │ hints before     │          │ Tracks difficulty,   │
-      │ answer release   │          │ hints, session time  │
+      │  💡 Estrategista │          │  📊 Analista de      │
+      │                  │          │     Desempenho       │
+      │ 3 dicas          │          │                      │
+      │ progressivas     │          │ Rastreia dificuldade,│
+      │ antes do         │          │ dicas e tempo de     │
+      │ gabarito         │          │ sessão               │
       └──────────────────┘          └──────────────────────┘
 ```
 
 ---
 
-## Agents
+## Agentes
 
-| Agent | File | Technology | Role |
+| Agente | Arquivo | Tecnologia | Função |
 |---|---|---|---|
-| 🔍 **Researcher** | `agents/researcher.py` | Tavily API | 3-layer semantic web search: didactic sources, news, academic references |
-| 📚 **ENEM API** | `agents/enem_api.py` | enem.dev API | Fetches real ENEM questions (2021–2023) filtered by topic and discipline |
-| 🏆 **Complexity Ranker** | `agents/complexity_ranker.py` | Local heuristics | Classifies questions into easy / medium / hard with zero LLM calls |
-| 🧠 **Critic** | `agents/critic.py` | Gemini 2.5 Flash-Lite / Groq | Strategic analysis: ENEM frequency, common mistakes, interdisciplinary links |
-| 📝 **Synthesizer** | `agents/synthesizer.py` | Gemini 2.5 Flash-Lite / Groq | Generates the full study material: introduction, key points, ENEM-style question |
-| 💡 **Strategist** | `agents/strategist.py` | Gemini 2.5 Flash-Lite / Groq | Delivers 3 progressive hints; answer only released after hint 3 |
-| 📊 **Performance Analyst** | `agents/performance_analyst.py` | Gemini 2.5 Flash-Lite / Groq | Tracks session behavior and generates a personalized end-of-session report |
+| 🔍 **Pesquisador** | `agents/researcher.py` | Tavily API | Busca semântica em 3 camadas: fontes didáticas, notícias, referências acadêmicas |
+| 📚 **ENEM API** | `agents/enem_api.py` | enem.dev API | Busca questões reais do ENEM (2021–2023) filtradas por tema e disciplina |
+| 🏆 **Ranqueador de Complexidade** | `agents/complexity_ranker.py` | Heurística local | Classifica questões em fácil / médio / difícil sem nenhuma chamada a LLM |
+| 🧠 **Crítico** | `agents/critic.py` | Gemini 2.5 Flash-Lite / Groq | Análise estratégica: frequência no ENEM, erros comuns, conexões interdisciplinares |
+| 📝 **Sintetizador** | `agents/synthesizer.py` | Gemini 2.5 Flash-Lite / Groq | Gera o material de estudo completo: introdução, pontos-chave e questão estilo ENEM |
+| 💡 **Estrategista** | `agents/strategist.py` | Gemini 2.5 Flash-Lite / Groq | Entrega 3 dicas progressivas; gabarito liberado apenas após a dica 3 |
+| 📊 **Analista de Desempenho** | `agents/performance_analyst.py` | Gemini 2.5 Flash-Lite / Groq | Rastreia o comportamento da sessão e gera relatório personalizado ao final |
 
-> The Orchestrator (`agents/orchestrator.py`) coordinates the full pipeline and exposes `estudar()`, `request_hint()`, `request_gabarito()`, and `relatorio_sessao()`.
+> O Orquestrador (`agents/orchestrator.py`) coordena o pipeline completo e expõe `estudar()`, `request_hint()`, `request_gabarito()` e `relatorio_sessao()`.
 
 ---
 
-## Tech Stack
+## Stack Tecnológica
 
-| Technology | Version | Purpose |
+| Tecnologia | Versão | Finalidade |
 |---|---|---|
 | Python | 3.14 | Runtime |
-| Streamlit | latest | Web interface |
-| Google Gemini | 2.5 Flash-Lite | Primary LLM (free tier) |
-| Groq — LLaMA 3.3 70B | `llama-3.3-70b-versatile` | Fallback LLM |
-| OpenAI — GPT-4o Mini | `gpt-4o-mini` | Last-resort LLM fallback |
-| Supabase | PostgreSQL | Persistent data layer (sessions, answers, questions) |
-| dbt Cloud | latest | Analytics transformation layer |
-| Tavily | latest | Semantic web search |
-| enem.dev API | v1 | Real ENEM question bank (2009–2023) |
-| python-dotenv | latest | Environment variable management |
-| google-genai | 2.7.0 | Gemini SDK |
+| Streamlit | latest | Interface web |
+| Google Gemini | 2.5 Flash-Lite | LLM principal (plano gratuito) |
+| Groq — LLaMA 3.3 70B | `llama-3.3-70b-versatile` | LLM fallback |
+| OpenAI — GPT-4o Mini | `gpt-4o-mini` | LLM fallback de último recurso |
+| Supabase | PostgreSQL | Camada de persistência (sessões, respostas, questões) |
+| dbt Cloud | latest | Pipeline de transformação analytics |
+| Tavily | latest | Busca semântica na web |
+| enem.dev API | v1 | Banco de questões reais do ENEM (2009–2023) |
+| python-dotenv | latest | Gerenciamento de variáveis de ambiente |
+| google-genai | 2.7.0 | SDK do Gemini |
 
 ---
 
-## How It Works
+## Como Funciona
 
-**1. Search** — The Researcher calls Tavily across 3 layers: didactic sites (Brasil Escola, Khan Academy), recent news (G1, BBC Brasil), and academic sources (SciELO, Google Scholar).
+**1. Pesquisa** — O Pesquisador aciona o Tavily em 3 camadas: sites didáticos (Brasil Escola, Khan Academy), notícias recentes (G1, BBC Brasil) e fontes acadêmicas (SciELO, Google Scholar).
 
-**2. Critical Analysis** — The Critic evaluates how often the topic appears in ENEM, the most common student mistakes, and which interdisciplinary connections are most likely to be tested.
+**2. Análise Crítica** — O Crítico avalia com que frequência o tema aparece no ENEM, os erros mais comuns dos alunos e quais conexões interdisciplinares têm maior chance de cair.
 
-**3. Synthesis** — The Synthesizer combines research + critique + the student's current session performance to generate a complete study material: introduction, key concepts, interdisciplinary links, an original ENEM-style question, and study tips.
+**3. Síntese** — O Sintetizador combina pesquisa + crítica + desempenho atual da sessão para gerar um material de estudo completo: introdução, conceitos-chave, conexões interdisciplinares, uma questão original estilo ENEM e dicas de prova.
 
-**4. Real Questions** — The ENEM API fetches official questions from 2021–2023. The Complexity Ranker classifies them locally into easy / medium / hard with no API calls. The student works through the queue in ascending difficulty.
+**4. Questões Reais** — A ENEM API busca questões oficiais de 2021–2023. O Ranqueador as classifica localmente em fácil / médio / difícil sem chamadas à API. O aluno percorre a fila em dificuldade crescente.
 
-**5. Progressive Hints** — Every wrong answer unlocks one hint from the Strategist. The answer commentary is only released after 3 hints (or when the student gets it right). The Performance Analyst records everything and produces a personalized report at the end of the session.
+**5. Dicas Progressivas** — Cada resposta errada libera uma dica do Estrategista. O gabarito comentado só é liberado após 3 dicas (ou quando o aluno acerta). O Analista de Desempenho registra tudo e produz um relatório personalizado ao final da sessão.
 
 ---
 
-## Getting Started
+## Como Usar
 
-### Prerequisites
+### Pré-requisitos
 
 - Python 3.11+
-- Free [Groq](https://console.groq.com) account → `GROQ_API_KEY`
-- Free [Tavily](https://tavily.com) account → `TAVILY_API_KEY`
-- Free [Google AI Studio](https://aistudio.google.com) account → `GEMINI_API_KEY`
-- [OpenAI](https://platform.openai.com) account → `OPENAI_API_KEY` *(optional — last-resort LLM fallback)*
-- [Supabase](https://supabase.com) project → `SUPABASE_URL` + `SUPABASE_KEY`
+- Conta gratuita no [Groq](https://console.groq.com) → `GROQ_API_KEY`
+- Conta gratuita no [Tavily](https://tavily.com) → `TAVILY_API_KEY`
+- Conta gratuita no [Google AI Studio](https://aistudio.google.com) → `GEMINI_API_KEY`
+- Conta na [OpenAI](https://platform.openai.com) → `OPENAI_API_KEY` *(opcional — fallback de último recurso)*
+- Projeto no [Supabase](https://supabase.com) → `SUPABASE_URL` + `SUPABASE_KEY`
 
-### Installation
+### Instalação
 
 ```bash
-# 1. Clone the repository
+# 1. Clone o repositório
 git clone https://github.com/silasluiz96-alt/KnowSynth.git
 cd KnowSynth
 
-# 2. Install dependencies
+# 2. Instale as dependências
 pip install -r requirements.txt
 
-# 3. Set up environment variables
-# Create a .env file in the project root:
-GEMINI_API_KEY=your_gemini_key_here
-GROQ_API_KEY=your_groq_key_here
-TAVILY_API_KEY=your_tavily_key_here
-OPENAI_API_KEY=your_openai_key_here
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_KEY=your_supabase_key_here
+# 3. Configure as variáveis de ambiente
+# Crie um arquivo .env na raiz do projeto:
+GEMINI_API_KEY=sua_chave_gemini
+GROQ_API_KEY=sua_chave_groq
+TAVILY_API_KEY=sua_chave_tavily
+OPENAI_API_KEY=sua_chave_openai
+SUPABASE_URL=sua_url_supabase
+SUPABASE_KEY=sua_chave_supabase
 ```
 
-### Running Locally
+### Rodando Localmente
 
 ```bash
 python -m streamlit run app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+Abra [http://localhost:8501](http://localhost:8501) no navegador.
 
-### Deploy on Streamlit Cloud
+### Deploy no Streamlit Cloud
 
-1. Fork this repository
-2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
-3. Select your fork, branch `main`, file `app.py`
-4. Under **Advanced settings → Secrets**, add:
+1. Faça um fork deste repositório
+2. Acesse [share.streamlit.io](https://share.streamlit.io) → **New app**
+3. Selecione seu fork, branch `main`, arquivo `app.py`
+4. Em **Advanced settings → Secrets**, adicione:
 ```toml
-GEMINI_API_KEY = "your_key"
-GROQ_API_KEY   = "your_key"
-TAVILY_API_KEY = "your_key"
-OPENAI_API_KEY = "your_key"
-SUPABASE_URL   = "your_url"
-SUPABASE_KEY   = "your_key"
+GEMINI_API_KEY = "sua_chave"
+GROQ_API_KEY   = "sua_chave"
+TAVILY_API_KEY = "sua_chave"
+OPENAI_API_KEY = "sua_chave"
+SUPABASE_URL   = "sua_url"
+SUPABASE_KEY   = "sua_chave"
 ```
-5. Click **Deploy** — the app will be live in ~2 minutes
+5. Clique em **Deploy** — o app estará no ar em ~2 minutos
 
 ---
 
-## Project Structure
+## Estrutura do Projeto
 
 ```
 knowsynth/
-├── app.py                          # Streamlit interface (single-page app)
+├── app.py                          # Interface Streamlit (app de página única)
 ├── requirements.txt
-├── .env                            # Not committed — local API keys
+├── .env                            # Não commitado — chaves de API locais
 ├── .gitignore
 │
 ├── agents/
-│   ├── orchestrator.py             # Pipeline coordinator — KnowSynth class
-│   ├── researcher.py               # Researcher agent (Tavily)
-│   ├── enem_api.py                 # ENEM API agent (enem.dev)
-│   ├── complexity_ranker.py        # Question difficulty classifier (local heuristics)
-│   ├── critic.py                   # Critic agent (Gemini / Groq)
-│   ├── synthesizer.py              # Synthesizer agent (Gemini / Groq)
-│   ├── strategist.py               # Strategist agent (Gemini / Groq)
-│   └── performance_analyst.py      # Performance Analyst agent (Gemini / Groq)
+│   ├── orchestrator.py             # Coordenador do pipeline — classe KnowSynth
+│   ├── researcher.py               # Agente Pesquisador (Tavily)
+│   ├── enem_api.py                 # Agente ENEM API (enem.dev)
+│   ├── complexity_ranker.py        # Classificador de dificuldade (heurística local)
+│   ├── critic.py                   # Agente Crítico (Gemini / Groq)
+│   ├── synthesizer.py              # Agente Sintetizador (Gemini / Groq)
+│   ├── strategist.py               # Agente Estrategista (Gemini / Groq)
+│   └── performance_analyst.py      # Agente Analista de Desempenho (Gemini / Groq)
 │
 ├── utils/
 │   ├── __init__.py
-│   ├── llm_client.py               # Centralized LLM client (Gemini → Groq → OpenAI fallback)
-│   └── supabase_db.py              # Supabase persistence layer (sessions, answers, cache)
+│   ├── llm_client.py               # Cliente LLM centralizado (Gemini → Groq → OpenAI)
+│   └── supabase_db.py              # Camada de persistência Supabase (sessões, respostas, cache)
 │
 └── .claude/
     ├── hooks/
-    │   └── hooks.py                # Pre/post/error observability hooks
+    │   └── hooks.py                # Hooks de observabilidade (pré/pós/erro)
     └── skills/
-        ├── researcher.md           # Researcher agent behavior spec
-        ├── critic.md               # Critic agent behavior spec
-        ├── synthesizer.md          # Synthesizer agent behavior spec
-        ├── strategist.md           # Strategist agent behavior spec
-        └── performance_analyst.md  # Performance Analyst behavior spec
+        ├── researcher.md           # Spec de comportamento do Pesquisador
+        ├── critic.md               # Spec de comportamento do Crítico
+        ├── synthesizer.md          # Spec de comportamento do Sintetizador
+        ├── strategist.md           # Spec de comportamento do Estrategista
+        └── performance_analyst.md  # Spec de comportamento do Analista de Desempenho
 ```
 
 ---
 
 ## Roadmap
 
-### v1 — Current (multi-agent study assistant)
-- [x] 6 specialized agents coordinated by an orchestrator
-- [x] 3-layer web search (didactic, news, academic)
-- [x] Real ENEM question bank (2021–2023) with difficulty classification
-- [x] 3 progressive hints before answer release
-- [x] Session performance tracking and end-of-session report
-- [x] Dark/Neon Streamlit UI with topic suggestion bubbles
-- [x] Gemini 2.5 Flash-Lite as primary LLM with Groq fallback
-- [x] Foreign language mode (English / Spanish ENEM questions)
-- [x] Deployed on Streamlit Cloud
+### v1 — Concluída (assistente de estudos multi-agente)
+- [x] 6 agentes especializados coordenados por um orquestrador
+- [x] Busca em 3 camadas (didático, notícias, acadêmico)
+- [x] Banco de questões reais do ENEM (2021–2023) com classificação de dificuldade
+- [x] 3 dicas progressivas antes de liberar o gabarito
+- [x] Rastreamento de desempenho da sessão e relatório final personalizado
+- [x] UI Dark/Neon no Streamlit com bolhas de sugestão de temas
+- [x] Gemini 2.5 Flash-Lite como LLM principal com fallback para Groq
+- [x] Modo de língua estrangeira (questões de inglês / espanhol do ENEM)
+- [x] Deploy no Streamlit Cloud
 
-### v2 — In progress (Supabase + dbt + advanced architecture)
-- [x] Supabase PostgreSQL as persistent data layer (replaces local storage)
-- [x] dbt Cloud pipeline — staging models + `mart_desempenho` (accuracy by student, topic, discipline)
-- [x] Daily scheduled job in dbt Cloud — `Daily - Run all models` (03:00 UTC)
-- [x] Supabase secrets configured in Streamlit Cloud (production-ready)
-- [ ] Long-term weak-points map — track evolution across sessions
-- [ ] Adaptive study plan generated by a new planner agent
-- [ ] Conditional orchestration — pipeline adapts dynamically by topic type
-- [ ] Dedicated `language_specialist` subagent for English/Spanish ENEM
-- [ ] RAG over INEP PDFs with embeddings
-- [ ] Session report delivered by e-mail via SendGrid
-- [ ] ENEM essay (*redação*) grading agent with competency rubric
-- [ ] PWA support — works as a mobile app
+### v2 — Em andamento (Supabase + dbt + arquitetura avançada)
+- [x] Supabase PostgreSQL como camada de persistência (substitui armazenamento local)
+- [x] Pipeline dbt Cloud — modelos staging + `mart_desempenho` (taxa de acerto por aluno, tema, disciplina)
+- [x] Job agendado no dbt Cloud — `Daily - Run all models` (03:00 UTC)
+- [x] Secrets do Supabase configurados no Streamlit Cloud (pronto para produção)
+- [x] Mapa de Pontos Fracos — aba com desempenho consolidado por tema
+- [x] PWA — suporte a "Adicionar à tela inicial" (Android e iOS)
+- [ ] Plano de estudo adaptativo — novo agente Planejador com sequência personalizada de temas
+- [ ] Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema
+- [ ] RAG sobre PDFs do INEP com embeddings
+- [ ] Relatório de sessão entregue por e-mail via SendGrid
+- [ ] Agente de redação com rubrica de competências do INEP
+- [ ] Fase 3 — Supabase Auth (login real com e-mail e senha por `user_id`)
 
-> **Development practices:** starting from v2, this project follows a formal
-> [Development Best Practices Agreement](https://www.linkedin.com/in/silas-bom-fim) (authored by Silas Luiz Bom Fim)
-> covering agent lifecycle (Plan → Act → Evaluate), branch governance, secrets management,
-> traceability and human accountability. Implemented from v2 onwards.
+> **Boas práticas de desenvolvimento:** a partir da v2, este projeto segue um
+> [Acordo Formal de Boas Práticas de Desenvolvimento](https://www.linkedin.com/in/silas-bom-fim)
+> (autoria de Silas Luiz Bom Fim) cobrindo ciclo de vida de agentes (Planejar → Agir → Avaliar),
+> governança de branches, gestão de secrets, rastreabilidade e responsabilidade humana.
 
 ---
 
-## Process Decisions
+## Decisões de Processo
 
-Decisions registered during development for traceability purposes.
+Decisões registradas durante o desenvolvimento para fins de rastreabilidade.
 
-| Date | Decision | Reason |
+| Data | Decisão | Motivo |
 |---|---|---|
-| Jun/2026 | OpenAI `gpt-4o-mini` added as last-resort LLM fallback | Pre-existing API key ($5 credit from a course); fits v2 data persistence phase without additional cost commitment |
-| Jun/2026 | Supabase and OpenAI added to Tech Stack mid-session | Both tools were already implemented; README update was a deliberate decision to keep the project showcase current |
-| Jun/2026 | Post-merge verification of `requirements.txt` added to Evaluate step | Dependencies were silently dropped during branch merges; explicit check after every merge prevents regression |
-| Jun/2026 | `mart_desempenho` dbt mart created — consolidates sessions + answers per student, topic and discipline | First analytics layer; enables future weak-points map and adaptive study plan |
-| Jun/2026 | dbt Cloud daily scheduled job configured (03:00 UTC, Production environment, dbt Latest) | Keeps mart fresh without manual runs; dbt Fusion was discarded — does not support PostgreSQL |
-| Jun/2026 | `SUPABASE_URL` and `SUPABASE_KEY` added to Streamlit Cloud Secrets | Required for production persistence; previously only local `.env` had these values |
+| Jun/2026 | `gpt-4o-mini` da OpenAI adicionado como fallback final de LLM | Chave de API pré-existente (crédito de $5 de um curso); encaixa na fase de persistência v2 sem compromisso de custo adicional |
+| Jun/2026 | OpenAI e Supabase adicionados à Stack Tecnológica em meio à sessão | Ambas as ferramentas já estavam implementadas; atualização do README foi uma decisão deliberada para manter o projeto atualizado |
+| Jun/2026 | Verificação pós-merge do `requirements.txt` adicionada à etapa Avaliar | Dependências foram removidas silenciosamente durante merges de branches; verificação explícita após cada merge previne regressão |
+| Jun/2026 | `mart_desempenho` criado no dbt — consolida sessões e respostas por aluno, tema e disciplina | Primeira camada de analytics; habilita mapa de pontos fracos e plano de estudo adaptativo |
+| Jun/2026 | Job agendado no dbt Cloud configurado (03:00 UTC, ambiente Production, dbt Latest) | Mantém o mart atualizado sem execuções manuais; dbt Fusion descartado — não suporta PostgreSQL |
+| Jun/2026 | `SUPABASE_URL` e `SUPABASE_KEY` adicionados aos Secrets do Streamlit Cloud | Necessário para persistência em produção; anteriormente apenas o `.env` local tinha esses valores |
 
 ---
 
-## Author
+## Autor
 
-**Silas Luiz Bom Fim** — Data Engineer · ML & AI Developer · Python | PL/SQL | LLM | UFABC
+**Silas Luiz Bom Fim** — Engenheiro de Dados · Desenvolvedor ML & IA · Python | PL/SQL | LLM | UFABC
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-silas--bom--fim-blue?logo=linkedin)](https://www.linkedin.com/in/silas-bom-fim)
 [![GitHub](https://img.shields.io/badge/GitHub-silasluiz96--alt-black?logo=github)](https://github.com/silasluiz96-alt)
-[![MDPI](https://img.shields.io/badge/MDPI_Logistics-2025-orange?logo=academia)](https://doi.org/10.3390/logistics9030109)
-
-📄 **Published researcher** — *Machine Failure Prediction using ML for Predictive Maintenance*,
-Logistics, Vol. 9, Issue 3, Art. 109 · MDPI · 2025 · Open Access
-→ [doi.org/10.3390/logistics9030109](https://doi.org/10.3390/logistics9030109)
 
 ---
 
 <div align="center">
-  Built with Generative AI for Brazilian high school students preparing for ENEM
+  Construído com IA Generativa para estudantes brasileiros se preparando para o ENEM
 </div>
