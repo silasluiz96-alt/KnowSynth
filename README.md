@@ -242,6 +242,18 @@ knowsynth/
 
 ---
 
+## Process Decisions
+
+Decisions registered during development for traceability purposes.
+
+| Date | Decision | Reason |
+|---|---|---|
+| Jun/2026 | OpenAI `gpt-4o-mini` added as last-resort LLM fallback | Pre-existing API key ($5 credit from a course); fits v2 data persistence phase without additional cost commitment |
+| Jun/2026 | Supabase and OpenAI added to Tech Stack mid-session | Both tools were already implemented; README update was a deliberate decision to keep the project showcase current |
+| Jun/2026 | Post-merge verification of `requirements.txt` added to Evaluate step | Dependencies were silently dropped during branch merges; explicit check after every merge prevents regression |
+
+---
+
 ## Author
 
 **Silas Luiz Bom Fim** — Data Engineer · ML & AI Developer · Python | PL/SQL | LLM | UFABC
