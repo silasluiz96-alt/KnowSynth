@@ -1181,11 +1181,12 @@ if st.session_state["resultado_atual"]:
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f'<h2 style="color:var(--cyan)">📖 {sintese.get("tema","").upper()}</h2>', unsafe_allow_html=True)
 
-    aba1, aba2, aba3, aba4 = st.tabs([
+    aba1, aba2, aba3, aba4, aba5 = st.tabs([
         "📚 Material de Estudo",
         "🔍 Fontes Pesquisadas",
         "🧠 Análise Crítica",
         "📊 Minha Sessão",
+        "🗺️ Pontos Fracos",
     ])
 
     # ── Aba 1: Material ───────────────────────────────────────────────────────
@@ -1647,6 +1648,60 @@ if st.session_state["resultado_atual"]:
 
         if st.button("🖥️ Ver Log do Pipeline", use_container_width=True):
             st.markdown(f'<div class="log-box">{edu.log_sessao()}</div>', unsafe_allow_html=True)
+
+    # ── Aba 5: Mapa de Pontos Fracos ─────────────────────────────────────────
+    with aba5:
+        from utils.supabase_db import get_mapa_pontos_fracos
+
+        st.markdown(f'<h3 style="color:var(--purple)">🗺️ Mapa de Pontos Fracos — {nome}</h3>', unsafe_allow_html=True)
+        st.markdown('<p style="color:var(--text3);font-size:.85rem">Baseado em todas as suas sessões anteriores. Atualizado diariamente pelo pipeline dbt.</p>', unsafe_allow_html=True)
+
+        dados = get_mapa_pontos_fracos(nome)
+
+        if not dados:
+            st.markdown(
+                '<div class="glass-card" style="text-align:center;padding:2rem">'
+                '<div style="font-size:2rem">📭</div>'
+                '<p style="color:var(--text3)">Nenhum dado encontrado ainda.<br>'
+                'Complete sessões de estudo para o mapa ser gerado.</p>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            for item in dados:
+                taxa = item.get("taxa_acerto_pct") or 0
+                tema = item.get("tema", "—")
+                disc = item.get("disciplina") or "—"
+                total_q = item.get("total_questoes", 0)
+                acertos = item.get("total_acertos", 0)
+                sessoes = item.get("total_sessoes", 0)
+
+                if taxa < 40:
+                    cor = "var(--red)"
+                    icone = "🔴"
+                elif taxa < 70:
+                    cor = "var(--yellow)"
+                    icone = "🟡"
+                else:
+                    cor = "var(--green)"
+                    icone = "🟢"
+
+                st.markdown(
+                    f'<div class="glass-card" style="margin-bottom:.5rem;padding:.75rem 1rem">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center">'
+                    f'<div>'
+                    f'<span style="font-size:1rem">{icone}</span> '
+                    f'<b style="color:var(--text)">{tema}</b> '
+                    f'<span style="color:var(--text3);font-size:.78rem">· {disc}</span>'
+                    f'</div>'
+                    f'<div style="color:{cor};font-weight:700;font-size:1.1rem">{taxa:.0f}%</div>'
+                    f'</div>'
+                    f'<div style="color:var(--text3);font-size:.75rem;margin-top:.3rem">'
+                    f'{acertos}/{total_q} acertos · {sessoes} sessão(ões)'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
 # ── Tela inicial (sem resultado e sem carregamento) ───────────────────────────
 elif not st.session_state.get("carregando") and not iniciar:
