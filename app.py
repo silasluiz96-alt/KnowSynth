@@ -39,6 +39,43 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── PWA — manifest + service worker ──────────────────────────────────────────
+# Manifest injetado via data URI para compatibilidade com Streamlit Cloud.
+# Service worker mínimo: garante o botão "Adicionar à tela inicial" no mobile.
+st.markdown("""
+<link rel="manifest" href="data:application/manifest+json,{
+  %22name%22: %22KnowSynth%22,
+  %22short_name%22: %22KnowSynth%22,
+  %22description%22: %22Assistente de estudos para o ENEM com IA%22,
+  %22start_url%22: %22/%22,
+  %22display%22: %22standalone%22,
+  %22background_color%22: %22%230e1117%22,
+  %22theme_color%22: %22%2300d4ff%22,
+  %22icons%22: [{
+    %22src%22: %22https://em-content.zobj.net/source/twitter/376/graduation-cap_1f393.png%22,
+    %22sizes%22: %22512x512%22,
+    %22type%22: %22image/png%22
+  }]
+}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KnowSynth">
+<meta name="theme-color" content="#0e1117">
+<script>
+if ('serviceWorker' in navigator) {
+  const sw = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+  `;
+  const blob = new Blob([sw], {type: 'application/javascript'});
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+</script>
+""", unsafe_allow_html=True)
+
 # ── Marca d'água KS ───────────────────────────────────────────────────────────
 st.markdown("""
     <div style="
