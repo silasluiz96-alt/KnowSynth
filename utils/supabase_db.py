@@ -180,6 +180,46 @@ def save_questao_cache(
         return False
 
 
+def get_mapa_pontos_fracos(aluno_nome: str) -> list[dict]:
+    """
+    Retorna o desempenho consolidado do aluno a partir da view mart_desempenho.
+
+    A view é mantida pelo job diário do dbt Cloud e fica no schema dbt_knowsynth.
+    Retorna lista ordenada por taxa_acerto_pct ascendente (piores temas primeiro).
+
+    Parâmetros:
+        aluno_nome — nome do aluno logado na sessão
+
+    Retorna:
+        Lista de dicts com: tema, disciplina, total_questoes, total_acertos,
+        total_erros, taxa_acerto_pct, media_dicas, total_sessoes.
+        Retorna [] se não houver dados ou se falhar.
+    """
+    try:
+        r = (
+            _get_client()
+            .schema("dbt_knowsynth")
+            .from_("mart_desempenho")
+            .select(
+                "tema, disciplina, total_questoes, total_acertos, "
+                "total_erros, taxa_acerto_pct, media_dicas, total_sessoes"
+            )
+            .eq("aluno_nome", aluno_nome)
+            .order("taxa_acerto_pct", desc=False)
+            .execute()
+        )
+        log.info(
+            "[supabase_db] mapa_pontos_fracos — aluno=%s registros=%d",
+            aluno_nome,
+            len(r.data),
+        )
+        return r.data or []
+
+    except Exception as exc:
+        log.warning("[supabase_db] Falha ao ler mart_desempenho: %s", exc)
+        return []
+
+
 # ── Helpers internos ──────────────────────────────────────────────────────────
 
 def _unix_to_iso(ts: float) -> str:
