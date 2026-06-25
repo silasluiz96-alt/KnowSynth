@@ -231,7 +231,7 @@ knowsynth/
 - [x] Secrets do Supabase configurados no Streamlit Cloud (pronto para produção)
 - [x] Mapa de Pontos Fracos — aba com desempenho consolidado por tema
 - [x] PWA — suporte a "Adicionar à tela inicial" (Android e iOS)
-- [ ] Relatório de sessão entregue por e-mail via SendGrid
+- [x] Relatório de sessão entregue por e-mail via SendGrid
 - [ ] Fase 3 — Supabase Auth (login real com e-mail e senha por `user_id` + LGPD provisória)
 - [~] ~~Plano de estudo adaptativo — novo agente Planejador~~ — aguarda Auth (identificação por `user_id`)
 - [~] ~~Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema~~ — valor marginal no estágio atual; reavaliado na v3

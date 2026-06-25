@@ -779,9 +779,7 @@ with st.sidebar:
     st.markdown("""
     <div class="preview-v2">
       <b>🔜 Em breve</b><br><br>
-      • 📧 Relatório por e-mail<br>
-      • 📊 Modelos dbt (staging + marts)<br>
-      • 🗺️ Mapa de pontos fracos<br>
+      • 🔐 Login individual por usuário<br>
       • 🤖 Plano adaptativo por IA
     </div>
     """, unsafe_allow_html=True)
