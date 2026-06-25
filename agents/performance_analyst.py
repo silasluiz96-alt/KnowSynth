@@ -17,8 +17,8 @@ load_dotenv()
 SKILL_PATH = Path(__file__).parent.parent / ".claude" / "skills" / "performance_analyst.md"
 
 PREVIEW_V2 = (
-    "🔜 Em breve: plano de estudo adaptativo gerado por IA com base no seu histórico, "
-    "relatório da sessão por e-mail e login individual por usuário. "
+    "🔜 Em breve: plano de estudo adaptativo gerado por IA com base no seu histórico "
+    "e login individual por usuário com histórico salvo na nuvem. "
     "Acompanhe as atualizações no GitHub."
 )
 
