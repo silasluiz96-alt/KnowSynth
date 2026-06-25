@@ -675,15 +675,47 @@ if st.session_state["sessao_encerrada"]:
         for r in recomendacoes:
             st.markdown(f'<div class="glass-card">💡 <span style="color:var(--text2)">{r}</span></div>', unsafe_allow_html=True)
 
+    # E-mail do relatório
+    st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+    st.markdown('<h3 style="color:var(--cyan)">📧 Receber Relatório por E-mail</h3>', unsafe_allow_html=True)
+    st.markdown('<p style="color:var(--text3);font-size:.88rem">Opcional — enviaremos um resumo da sessão com seus pontos fracos e recomendações.</p>', unsafe_allow_html=True)
+
+    email_col, btn_col = st.columns([3, 1])
+    with email_col:
+        email_input = st.text_input(
+            "Seu e-mail",
+            placeholder="aluno@email.com",
+            label_visibility="collapsed",
+            key="email_relatorio",
+        )
+    with btn_col:
+        enviar_email = st.button("Enviar", use_container_width=True)
+
+    if enviar_email:
+        if not email_input or "@" not in email_input:
+            st.warning("Digite um e-mail válido antes de enviar.")
+        else:
+            from utils.email_sender import enviar_relatorio
+            with st.spinner("Enviando relatório..."):
+                ok, msg = enviar_relatorio(
+                    destinatario=email_input,
+                    aluno_nome=nome,
+                    relatorio=relatorio,
+                )
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
+
     # Preview v2
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="glass-card glass-card-purple" style="text-align:center;padding:1.5rem">
       <b style="color:var(--purple);font-size:1rem">🔜 Próximas funcionalidades</b><br><br>
       <span style="color:var(--text3)">
-        📧 Relatório da sessão por e-mail — receba seus pontos fracos e sugestões direto na caixa de entrada<br><br>
         📊 Transformações dbt — camada analítica sobre seus dados de sessão com modelos staging e marts<br><br>
-        🗺️ Mapa de pontos fracos — visualize sua evolução entre sessões ao longo do tempo
+        🗺️ Mapa de pontos fracos — visualize sua evolução entre sessões ao longo do tempo<br><br>
+        🔐 Login individual por usuário com histórico salvo na nuvem
       </span>
     </div>
     """, unsafe_allow_html=True)
@@ -747,9 +779,7 @@ with st.sidebar:
     st.markdown("""
     <div class="preview-v2">
       <b>🔜 Em breve</b><br><br>
-      • 📧 Relatório por e-mail<br>
-      • 📊 Modelos dbt (staging + marts)<br>
-      • 🗺️ Mapa de pontos fracos<br>
+      • 🔐 Login individual por usuário<br>
       • 🤖 Plano adaptativo por IA
     </div>
     """, unsafe_allow_html=True)
