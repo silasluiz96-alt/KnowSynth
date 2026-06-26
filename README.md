@@ -224,7 +224,7 @@ knowsynth/
 - [x] Modo de língua estrangeira (questões de inglês / espanhol do ENEM)
 - [x] Deploy no Streamlit Cloud
 
-### v2 — Em andamento (Supabase + dbt + arquitetura avançada)
+### v2 — Concluída (Supabase + dbt + arquitetura avançada)
 - [x] Supabase PostgreSQL como camada de persistência (substitui armazenamento local)
 - [x] Pipeline dbt Cloud — modelos staging + `mart_desempenho` (taxa de acerto por aluno, tema, disciplina)
 - [x] Job agendado no dbt Cloud — `Daily - Run all models` (03:00 UTC)
@@ -232,14 +232,24 @@ knowsynth/
 - [x] Mapa de Pontos Fracos — aba com desempenho consolidado por tema
 - [x] PWA — suporte a "Adicionar à tela inicial" (Android e iOS)
 - [x] Relatório de sessão entregue por e-mail via SendGrid
-- [x] Fase 3 — Supabase Auth (login real com e-mail e senha por `user_id` + LGPD provisória)
-- [~] ~~Plano de estudo adaptativo — novo agente Planejador~~ — aguarda Auth (identificação por `user_id`)
-- [~] ~~Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema~~ — valor marginal no estágio atual; reavaliado na v3
-- [ ] RAG sobre PDFs do INEP com embeddings — mantido no radar para v3, após Auth
+- [x] Supabase Auth — login real com e-mail e senha por `user_id` + LGPD provisória
+- [~] ~~Plano de estudo adaptativo — novo agente Planejador~~ — promovido ao v3 com motor de ML
+- [~] ~~Orquestração condicional — pipeline se adapta dinamicamente por tipo de tema~~ — valor marginal; reavaliado na v3
+- [~] ~~RAG sobre PDFs do INEP~~ — promovido ao v3 com pgvector + embeddings
 
-> Descontinuados temporariamente: Plano adaptativo e Orquestração condicional dependem de usuários reais identificados (Auth). RAG reclassificado para v3 — complementa o Tavily com fonte primária do INEP.
->
 > Agente de redação — removido do roadmap atual; escopo separado, avaliado futuramente.
+
+### v3 — Planejada (Personalização, RAG e Machine Learning)
+- [ ] Memória persistente por aluno — histórico de sessões injetado no contexto do LLM via `user_id`
+- [ ] RAG sobre PDFs do INEP — embeddings com pgvector no Supabase + busca semântica sobre documentos oficiais
+- [ ] Feedback de sessão — avaliação pós-sessão (1–5 estrelas + texto livre) com análise de sentimento
+- [ ] Feature Store no dbt — marts de ML com taxa de acerto, sequência temporal, padrões de dificuldade por aluno
+- [ ] Motor de recomendação ML — mRMR para seleção de features + Árvore de Decisão para recomendar próximo tema e leituras de reforço
+- [ ] Agente Planejador — plano de estudo personalizado gerado por IA com base no perfil ML do aluno
+- [ ] UI mobile-first — layout 100% responsivo para uso exclusivo via celular
+- [ ] LSTM para predição de desempenho — v3.x, após consolidação do histórico de usuários
+
+> v3 cobre as tech skills: Generative AI & Agents, Text Analysis, Information Extraction, Machine Learning (mRMR + Árvore de Decisão + LSTM), Python e SQL/dbt avançado.
 
 > **Boas práticas de desenvolvimento:** a partir da v2, este projeto segue um
 > [Acordo Formal de Boas Práticas de Desenvolvimento](https://www.linkedin.com/in/silas-bom-fim)
