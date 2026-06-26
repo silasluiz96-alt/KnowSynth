@@ -415,6 +415,8 @@ def _init_state():
         # Sessão do usuário
         "logged_in":        False,
         "usuario_nome":     "",
+        "user_id":          None,   # UUID do Supabase Auth (None = acesso rápido)
+        "user_email":       "",     # e-mail autenticado (vazio = acesso rápido)
         "meta_tempo":       "Sem limite",
         "sessao_inicio":    None,
         "sessao_encerrada": False,
@@ -515,12 +517,14 @@ def _formatar_tempo(segundos: int) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TELA 1 — LOGIN
+# TELA 1 — LOGIN / CADASTRO
 # ═══════════════════════════════════════════════════════════════════════════════
 if not st.session_state["logged_in"]:
+    from utils.auth import sign_in, sign_up, consent_now
+
     # Sidebar mínima no login
     with st.sidebar:
-        st.markdown('<p style="color:#333;font-size:.78rem">KnowSynth v1</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#333;font-size:.78rem">KnowSynth v2</p>', unsafe_allow_html=True)
 
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
@@ -531,29 +535,100 @@ if not st.session_state["logged_in"]:
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Fluxo: Login normal ───────────────────────────────────────────────
-        nome  = st.text_input("Nome", placeholder="Ex: Ana, Carlos, Mariana...", key="input_nome")
-        senha = st.text_input("Senha", placeholder="Digite sua senha", type="password", key="input_senha")
+        # ── Abas: Entrar / Criar conta ────────────────────────────────────────
+        aba_login, aba_cadastro = st.tabs(["🔑 Entrar", "✨ Criar conta"])
 
-        meta = st.selectbox(
-            "Qual sua meta de estudos hoje?",
-            ["Sem limite", "30min", "1h", "2h", "3h"],
-            index=0,
-            key="input_meta",
-        )
+        with aba_login:
+            email_login = st.text_input("E-mail", placeholder="aluno@email.com", key="login_email")
+            senha_login = st.text_input("Senha", placeholder="Sua senha", type="password", key="login_senha")
 
-        st.markdown("")
-        if st.button("🚀 Entrar", type="primary", use_container_width=True):
-            if not nome.strip():
-                st.error("Por favor, insira seu nome para continuar.")
-            elif not senha.strip():
-                st.error("Por favor, insira uma senha para continuar.")
-            else:
-                st.session_state["logged_in"]     = True
-                st.session_state["usuario_nome"]  = nome.strip()
-                st.session_state["meta_tempo"]    = meta
-                st.session_state["sessao_inicio"] = time.time()
-                st.rerun()
+            meta_login = st.selectbox(
+                "Meta de estudos hoje",
+                ["Sem limite", "30min", "1h", "2h", "3h"],
+                key="login_meta",
+            )
+
+            st.markdown("")
+            if st.button("🚀 Entrar", type="primary", use_container_width=True, key="btn_login"):
+                if not email_login.strip() or "@" not in email_login:
+                    st.error("Digite um e-mail válido.")
+                elif not senha_login:
+                    st.error("Digite sua senha.")
+                else:
+                    ok, resultado = sign_in(email_login.strip(), senha_login)
+                    if ok:
+                        nome_display = resultado["email"].split("@")[0].capitalize()
+                        st.session_state["logged_in"]     = True
+                        st.session_state["usuario_nome"]  = nome_display
+                        st.session_state["user_id"]       = resultado["user_id"]
+                        st.session_state["user_email"]    = resultado["email"]
+                        st.session_state["meta_tempo"]    = meta_login
+                        st.session_state["sessao_inicio"] = time.time()
+                        st.rerun()
+                    else:
+                        st.error(resultado)
+
+        with aba_cadastro:
+            email_cad = st.text_input("E-mail", placeholder="aluno@email.com", key="cad_email")
+            senha_cad = st.text_input(
+                "Senha",
+                placeholder="Mín. 8 caracteres, 1 número e 1 caractere especial",
+                type="password",
+                key="cad_senha",
+            )
+            nome_cad = st.text_input("Como quer ser chamado?", placeholder="Ex: Ana, Carlos...", key="cad_nome")
+
+            st.markdown("")
+            # Termo LGPD — checkbox explícito, não pré-marcado (Art. 7º e 8º LGPD)
+            lgpd_ok = st.checkbox(
+                "Li e aceito o uso dos meus dados para fins educacionais no KnowSynth.",
+                value=False,
+                key="cad_lgpd",
+            )
+            st.markdown("""
+            <p style="color:var(--text3);font-size:.75rem;margin:.2rem 0 1rem;line-height:1.5">
+            Seus dados (e-mail e histórico de sessões) são usados exclusivamente para
+            personalizar sua experiência de estudo. O mapa de pontos fracos usa um algoritmo
+            para classificar seu desempenho por tema (Art. 20º LGPD). Você pode solicitar
+            exclusão a qualquer momento pelo e-mail
+            <b>silas.dev.enhancement@gmail.com</b>.
+            </p>
+            """, unsafe_allow_html=True)
+
+            if st.button("✨ Criar conta", type="primary", use_container_width=True, key="btn_cadastro"):
+                import re
+                if not email_cad.strip() or "@" not in email_cad:
+                    st.error("Digite um e-mail válido.")
+                elif len(senha_cad) < 8:
+                    st.error("A senha deve ter pelo menos 8 caracteres.")
+                elif not re.search(r"\d", senha_cad):
+                    st.error("A senha deve conter pelo menos 1 número.")
+                elif not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", senha_cad):
+                    st.error("A senha deve conter pelo menos 1 caractere especial (!@#$%...).")
+                elif not nome_cad.strip():
+                    st.error("Informe como quer ser chamado.")
+                elif not lgpd_ok:
+                    st.warning("É necessário aceitar os termos para criar sua conta.")
+                else:
+                    ts_consent = consent_now()
+                    ok, resultado = sign_up(email_cad.strip(), senha_cad, ts_consent)
+                    if ok:
+                        if resultado.get("needs_confirmation"):
+                            st.success(
+                                "✅ Conta criada! Enviamos um e-mail de confirmação para "
+                                f"**{resultado['email']}**. "
+                                "Clique no link recebido e depois faça login."
+                            )
+                        else:
+                            st.session_state["logged_in"]     = True
+                            st.session_state["usuario_nome"]  = nome_cad.strip()
+                            st.session_state["user_id"]       = resultado["user_id"]
+                            st.session_state["user_email"]    = resultado["email"]
+                            st.session_state["meta_tempo"]    = "Sem limite"
+                            st.session_state["sessao_inicio"] = time.time()
+                            st.rerun()
+                    else:
+                        st.error(resultado)
 
         # ── Divisor ───────────────────────────────────────────────────────────
         st.markdown("""
@@ -564,7 +639,7 @@ if not st.session_state["logged_in"]:
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Fluxo: Acesso Rápido ──────────────────────────────────────────────
+        # ── Fluxo: Acesso Rápido (testes) ─────────────────────────────────────
         if st.button("⚡ Acesso Rápido", use_container_width=True):
             st.session_state["acesso_rapido_aberto"] = True
             st.rerun()
@@ -578,6 +653,7 @@ if not st.session_state["logged_in"]:
                 else:
                     st.session_state["logged_in"]            = True
                     st.session_state["usuario_nome"]         = nome_rapido.strip()
+                    st.session_state["user_id"]              = None
                     st.session_state["meta_tempo"]           = "Sem limite"
                     st.session_state["sessao_inicio"]        = time.time()
                     st.session_state["acesso_rapido_aberto"] = False
@@ -605,6 +681,7 @@ if st.session_state["sessao_encerrada"]:
             tema       = _ultimo_tema,
             disciplina = _disciplina,
             meta_tempo = st.session_state["meta_tempo"],
+            user_id    = st.session_state.get("user_id"),
         )
         st.session_state["supabase_sessao_id"] = _sessao_id or "erro"
         if _sessao_id:
@@ -678,27 +755,39 @@ if st.session_state["sessao_encerrada"]:
     # E-mail do relatório
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown('<h3 style="color:var(--cyan)">📧 Receber Relatório por E-mail</h3>', unsafe_allow_html=True)
-    st.markdown('<p style="color:var(--text3);font-size:.88rem">Opcional — enviaremos um resumo da sessão com seus pontos fracos e recomendações.</p>', unsafe_allow_html=True)
 
-    email_col, btn_col = st.columns([3, 1])
-    with email_col:
-        email_input = st.text_input(
-            "Seu e-mail",
-            placeholder="aluno@email.com",
-            label_visibility="collapsed",
-            key="email_relatorio",
+    _user_email = st.session_state.get("user_email", "")
+
+    if _user_email:
+        # Usuário autenticado — e-mail já conhecido, só exibe o botão
+        st.markdown(
+            f'<p style="color:var(--text3);font-size:.88rem">O relatório será enviado para <b style="color:var(--cyan)">{_user_email}</b>.</p>',
+            unsafe_allow_html=True,
         )
-    with btn_col:
-        enviar_email = st.button("Enviar", use_container_width=True)
+        enviar_email = st.button("📨 Enviar Relatório", use_container_width=True)
+        email_destino = _user_email
+    else:
+        # Acesso Rápido — solicita e-mail manualmente
+        st.markdown('<p style="color:var(--text3);font-size:.88rem">Opcional — informe seu e-mail para receber o resumo da sessão.</p>', unsafe_allow_html=True)
+        email_col, btn_col = st.columns([3, 1])
+        with email_col:
+            email_destino = st.text_input(
+                "Seu e-mail",
+                placeholder="aluno@email.com",
+                label_visibility="collapsed",
+                key="email_relatorio",
+            )
+        with btn_col:
+            enviar_email = st.button("Enviar", use_container_width=True)
 
     if enviar_email:
-        if not email_input or "@" not in email_input:
+        if not email_destino or "@" not in email_destino:
             st.warning("Digite um e-mail válido antes de enviar.")
         else:
             from utils.email_sender import enviar_relatorio
             with st.spinner("Enviando relatório..."):
                 ok, msg = enviar_relatorio(
-                    destinatario=email_input,
+                    destinatario=email_destino,
                     aluno_nome=nome,
                     relatorio=relatorio,
                 )
@@ -776,11 +865,19 @@ with st.sidebar:
     if st.button("🖥️ Log do Pipeline", use_container_width=True):
         st.markdown(f'<div class="log-box">{edu.log_sessao()}</div>', unsafe_allow_html=True)
 
+    st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+    if st.button("🚪 Sair", use_container_width=True):
+        from utils.auth import sign_out
+        if st.session_state.get("user_id"):
+            sign_out()
+        for k in list(st.session_state.keys()):
+            del st.session_state[k]
+        st.rerun()
+
     st.markdown("""
     <div class="preview-v2">
       <b>🔜 Em breve</b><br><br>
-      • 🔐 Login individual por usuário<br>
-      • 🤖 Plano adaptativo por IA
+      • 🤖 Plano de estudo adaptativo por IA
     </div>
     """, unsafe_allow_html=True)
 

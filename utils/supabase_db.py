@@ -62,17 +62,19 @@ def save_sessao(
     tema: str,
     disciplina: str | None = None,
     meta_tempo: str | None = None,
+    user_id: str | None = None,
 ) -> str | None:
     """
     Insere uma sessão encerrada na tabela `sessoes`.
 
     Parâmetros:
-        aluno_nome  — nome digitado pelo aluno no login
+        aluno_nome  — nome exibido ao aluno
         inicio      — timestamp Unix do início da sessão
         fim         — timestamp Unix do encerramento
         tema        — último tema estudado na sessão
         disciplina  — disciplina do tema (opcional)
         meta_tempo  — "30min", "1h", "Sem limite" etc. (opcional)
+        user_id     — UUID do Supabase Auth (None = acesso rápido sem conta)
 
     Retorna:
         UUID da sessão inserida, ou None se falhar.
@@ -86,6 +88,8 @@ def save_sessao(
             "disciplina": disciplina,
             "meta_tempo": meta_tempo,
         }
+        if user_id:
+            payload["user_id"] = user_id
         r = _get_client().table("sessoes").insert(payload).execute()
         sessao_id = r.data[0]["id"] if r.data else None
         log.info("[supabase_db] sessao salva — id=%s aluno=%s tema=%s", sessao_id, aluno_nome, tema)
