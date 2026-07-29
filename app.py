@@ -6,7 +6,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(__file__))
 
 from agents.orchestrator import KnowSynth as EduSynth
-from utils.supabase_db import save_sessao, save_resposta, save_questao_cache
+from utils.supabase_db import save_sessao, save_resposta, save_questao_cache, save_feedback
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -460,6 +460,9 @@ def _init_state():
         "supabase_sessao_id":  None, # UUID da sessão no Supabase (preenchido ao encerrar)
         # Login
         "acesso_rapido_aberto": False,  # flag: exibe campo de nome no fluxo de acesso rápido
+        # Feedback
+        "feedback_nota":    0,
+        "feedback_enviado": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -796,7 +799,56 @@ if st.session_state["sessao_encerrada"]:
             else:
                 st.error(msg)
 
-    # Preview v2
+    # ── Feedback de sessão ────────────────────────────────────────────────────
+    st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
+    st.markdown('<h3 style="color:var(--yellow)">⭐ Como foi sua sessão?</h3>', unsafe_allow_html=True)
+
+    if not st.session_state.get("feedback_enviado"):
+        nota_escolhida = st.session_state.get("feedback_nota", 0)
+
+        cols_star = st.columns(5)
+        for i, col in enumerate(cols_star, 1):
+            with col:
+                label = "⭐" if i <= nota_escolhida else "☆"
+                if st.button(f"{label} {i}", key=f"star_{i}", use_container_width=True):
+                    st.session_state["feedback_nota"] = i
+                    st.rerun()
+
+        comentario_fb = st.text_area(
+            "Comentário (opcional)",
+            placeholder="O que achou? Alguma sugestão?",
+            key="feedback_comentario",
+            label_visibility="collapsed",
+            max_chars=500,
+        )
+
+        if st.button("📩 Enviar avaliação", use_container_width=True, disabled=nota_escolhida == 0):
+            ok = save_feedback(
+                sessao_id  = st.session_state.get("supabase_sessao_id"),
+                aluno_nome = nome,
+                nota       = nota_escolhida,
+                comentario = comentario_fb.strip() or None,
+                user_id    = st.session_state.get("user_id"),
+            )
+            if ok:
+                st.session_state["feedback_enviado"] = True
+                st.rerun()
+            else:
+                st.warning("Não foi possível salvar sua avaliação. Tente novamente.")
+
+        if nota_escolhida == 0:
+            st.markdown('<p style="color:#555;font-size:.78rem">Selecione uma nota antes de enviar.</p>', unsafe_allow_html=True)
+    else:
+        nota_final = st.session_state.get("feedback_nota", 5)
+        st.markdown(
+            f'<div class="glass-card glass-card-yellow" style="text-align:center">'
+            f'<span style="font-size:1.6rem">{"⭐" * nota_final}</span><br>'
+            f'<b style="color:var(--yellow)">Obrigado pelo feedback!</b>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Preview v3
     st.markdown('<hr class="neon-divider">', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="glass-card glass-card-purple" style="text-align:center;padding:1.5rem">
