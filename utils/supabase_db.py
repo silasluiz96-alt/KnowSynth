@@ -224,6 +224,46 @@ def get_mapa_pontos_fracos(aluno_nome: str) -> list[dict]:
         return []
 
 
+def save_feedback(
+    sessao_id: str | None,
+    aluno_nome: str,
+    nota: int,
+    comentario: str | None = None,
+    user_id: str | None = None,
+) -> bool:
+    """
+    Salva a avaliação pós-sessão na tabela `feedbacks`.
+
+    Parâmetros:
+        sessao_id  — UUID da sessão avaliada (pode ser None se a sessão não foi salva)
+        aluno_nome — nome do aluno
+        nota       — avaliação de 1 a 5
+        comentario — texto livre opcional
+        user_id    — UUID do Supabase Auth (None = acesso rápido)
+
+    Retorna:
+        True se salvou, False se falhou.
+    """
+    try:
+        payload = {
+            "aluno_nome": aluno_nome,
+            "nota":       nota,
+            "comentario": comentario or None,
+        }
+        if sessao_id and sessao_id != "erro":
+            payload["sessao_id"] = sessao_id
+        if user_id:
+            payload["user_id"] = user_id
+
+        _get_client().table("feedbacks").insert(payload).execute()
+        log.info("[supabase_db] feedback salvo — aluno=%s nota=%d", aluno_nome, nota)
+        return True
+
+    except Exception as exc:
+        log.warning("[supabase_db] Falha ao salvar feedback: %s", exc)
+        return False
+
+
 # ── Helpers internos ──────────────────────────────────────────────────────────
 
 def _unix_to_iso(ts: float) -> str:
